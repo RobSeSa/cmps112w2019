@@ -16,6 +16,34 @@
 (define *stdout* (current-output-port))
 (define *stderr* (current-error-port))
 
+(define *function-table* (make-hash))
+(define *variable-table* (make-hash))
+(define *array-table* (make-hash))
+(define *label-table* (make-hash))
+
+;; from symobls.scm in /afs/cats.ucsc.edu/courses/cmps112-wm/Languages/scheme/Examples 
+(for-each
+    (lambda (pair)
+        (hash-set! *function-table* (car pair) (cadr pair)))
+    `(
+        (log10_2 	0.301029995663981195213738894724493026768189881)
+	(sqrt_2 	1.414213562373095048801688724209698078569671875)
+	(e 		2.718281828459045235360287471352662497757247093)
+	(pi 		3.141592653589793238462643383279502884197169399)
+	(div 		,(lambda (x y) (floor (/ x y))))
+	(log10 		,(lambda (x) (/ (log x) (log 10.0))))
+	(mod 		,(lambda (x y) (- x (* (div x y) y))))
+	(quot 		,(lambda (x y) (truncate (/ x y))))
+	(rem 		,(lambda (x y) (- x (* (quot x y) y))))
+	(+ 		, +)
+	(^ 		, expt)
+	(ceil 		, ceiling)
+	(exp 		, exp)
+	(floor 		, floor)
+	(log 		, log)
+	(sqrt 		, sqrt)
+    ))
+		
 (define *run-file*
     (let-values
         (((dirpath basepath root?)
@@ -47,22 +75,22 @@
          (when (not (eq? token eof)) (dump-stdin))))
 
 
-(define (write-program-by-line filename program)
-    (printf "==================================================~n")
-    (printf "~a: ~s~n" *run-file* filename)
-    (printf "==================================================~n")
-    (printf "(~n")
-    (map (lambda (line) (printf "~s~n" line)) program)
-    (printf ")~n")
-    (dump-stdin))
+;;(define (write-program-by-line filename program)
+;;    (printf "==================================================~n")
+;;    (printf "~a: ~s~n" *run-file* filename)
+;;    (printf "==================================================~n")
+;;    (printf "(~n")
+;;    (map (lambda (line) (printf "~s~n" line)) program)
+;;    (printf ")~n")
+;;    (dump-stdin))
 
-(define (main arglist)
-    (if (or (null? arglist) (not (null? (cdr arglist))))
-        (usage-exit)
-        (let* ((sbprogfile (car arglist))
-               (program (readlist-from-inputfile sbprogfile)))
-              (write-program-by-line sbprogfile program))))
+;(define (main arglist)
+;;    (if (or (null? arglist) (not (null? (cdr arglist))))
+;;        (usage-exit)
+;;        (let* ((sbprogfile (car arglist))
+;;               (program (readlist-from-inputfile sbprogfile)))
+;;              (write-program-by-line sbprogfile program))))
 
-(when (terminal-port? *stdin*)
-      (main (vector->list (current-command-line-arguments))))
+;;(when (terminal-port? *stdin*)
+;;      (main (vector->list (current-command-line-arguments))))
 
