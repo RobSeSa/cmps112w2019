@@ -54,7 +54,16 @@
     (printf "(~n")
     (map (lambda (line) (printf "~s~n" line)) program)
     (printf ")~n")
+;;    (printf "(car program) = ~s~n" (car program))
+    (map (lambda (output) (printf "(car program) = ~s~n" (car output))) program)
+    (map (lambda (output) (printf "(cdr program) = ~s~n" (cdr output))) program)
+    (map (lambda (output) (printf "(cadr program) = ~s~n" (cadr output))) program)
+    (map (lambda (output) (printf "(length output) = ~s~n" (length output))) program)
+    ;;(map (lambda (output) (printf "(caadr program) = ~s~n" (caadr output))) program)
     (dump-stdin))
+
+
+
 
 (define (main arglist)
     (if (or (null? arglist) (not (null? (cdr arglist))))
@@ -65,4 +74,9 @@
 
 (when (terminal-port? *stdin*)
       (main (vector->list (current-command-line-arguments))))
+
+
+;;
+;;
+
 
