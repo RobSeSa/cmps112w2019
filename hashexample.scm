@@ -28,8 +28,9 @@
       (+ , +) ;;(lambda (x y) (+ x y)))
       (- ,-) ;;(lambda (x y) (- x y)))
       (* ,*)
-      (vec ,(make-vector 10 0.0)))
-)
+      (vec ,(make-vector 10 0.0))
+      ;(newline ,newline))
+))
 
 ;;
 ;; Print the hash table.
@@ -77,6 +78,7 @@
     '( (* var 7 2)
        (- 3 4 1)
        (+ (* var 7) (- 3 4))
+       ;(newline)
 ))
 
 ;;

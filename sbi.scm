@@ -35,13 +35,13 @@
 	(mod 		,(lambda (x y) (- x (* (div x y) y))))
 	(quot 		,(lambda (x y) (truncate (/ x y))))
 	(rem 		,(lambda (x y) (- x (* (quot x y) y))))
-	(+ 		, +)
-	(^ 		, expt)
-	(ceil 		, ceiling)
-	(exp 		, exp)
-	(floor 		, floor)
-	(log 		, log)
-	(sqrt 		, sqrt)
+	(+ 		,+)
+	(^ 		,expt)
+	(ceil 		,ceiling)
+	(exp 		,exp)
+	(floor 		,floor)
+	(log 		,log)
+	(sqrt 		,sqrt)
     ))
 		
 (define *run-file*
@@ -74,6 +74,10 @@
          (printf "token=~a~n" token)
          (when (not (eq? token eof)) (dump-stdin))))
 
+(define (store-label file)
+    (map (lambda (line) (hash-set! *label-table* (car line) (cdr line))) file)
+    (hash-for-each *label-table* (lambda (key value) 
+                                         (printf "~s: ~s~n" key value))))
 
 ;;(define (write-program-by-line filename program)
 ;;    (printf "==================================================~n")
@@ -84,13 +88,14 @@
 ;;    (printf ")~n")
 ;;    (dump-stdin))
 
-;(define (main arglist)
-;;    (if (or (null? arglist) (not (null? (cdr arglist))))
-;;        (usage-exit)
-;;        (let* ((sbprogfile (car arglist))
-;;               (program (readlist-from-inputfile sbprogfile)))
+(define (main arglist)
+    (if (or (null? arglist) (not (null? (cdr arglist))))
+        (usage-exit)
+        (let* ((sbprogfile (car arglist))
+               (program (readlist-from-inputfile sbprogfile)))
+               (store-label  program))))
 ;;              (write-program-by-line sbprogfile program))))
 
-;;(when (terminal-port? *stdin*)
-;;      (main (vector->list (current-command-line-arguments))))
+(when (terminal-port? *stdin*)
+      (main (vector->list (current-command-line-arguments))))
 
