@@ -90,10 +90,10 @@
     (when (not (null? program))
         ;when the number of objects in the first line in the list is > 2
         ;this implies that there is a line number, label, and statement
-        (when (> (length (car program)) 2)
+        ;;(when (> (length (car program)) 2)
+        (cond [(symbol? (cadr (car program))) 
             ;store the 2nd object in the line as the key and the line number as the value
-            (hash-set! *label-table* (cadr (car program)) (car (car program)))
-        )
+            (hash-set! *label-table* (cadr (car program)) (car (car program)))])
         ;repeat recursively on the rest of the lines
         (create-label-table (cdr program))
     )
