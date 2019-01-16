@@ -107,6 +107,20 @@
         (e       ,(exp 1.0))
 
      ))
+
+(define (print-type arg)
+    (if (string? arg) (printf arg)
+        (printf " ~a" (eval-expr arg))
+    )
+)
+
+(define (call-print input)
+    (for-each (lambda (x)
+        (print-type x)
+    ) input)
+    (newline)
+)
+
 ;; function definitions
 (define *function-table* (make-hash))
 (define (function-get key)
@@ -146,6 +160,8 @@
         (div     ,(lambda (x y) (floor (/ x y))))
         (quot    ,(lambda (x y) (truncate (/ x y))))
         (rem     ,(lambda (x y) (- x (* (quot x y) y))))
+        ;; real functions
+        (print   ,call-print)
 
      ))
 
@@ -154,7 +170,7 @@
     (cond [(number? statement) (+ statement 0.0)]
           [(symbol? statement) (cond [(not (eq? (hash-ref *variable-table* statement 0) 0)) 
 					(hash-ref *variable-table* statement 0)]
-					[(not (eq? (hash-ref *array-table* statement 0)))
+					[(not (eq? (hash-ref *array-table* statement 0) 0))
 					(hash-ref *array-table* statement 0)]
 					(else 0))
 	  ]
@@ -166,12 +182,24 @@
 
 (define (execute-program program)
     (create-label-table program)
-    (print-table *label-table*)
-    (print-table *variable-table*)
-    (print-table *function-table*)
+;    (print-table *label-table*)
+;    (print-table *variable-table*)
+;    (print-table *function-table*)
     ;(print-each-car program)
-    (display (eval-expr '(+ e)))
-    (newline)
+    (interpret-program program)
+)
+
+(define (interpret-statement input)
+    ((function-get (car input)) (cdr input))
+)
+
+(define (interpret-program program)
+    (cond 
+	  ;[ (null? (car program)) ]
+	  [ (null? (cdar program)) (interpret-program (cdr program)) ]
+	  [ (symbol? (cadar program)) ((interpret-statement (caddar program)) (interpret-program (cdr program)))]
+          [ (pair? (cadar program)) ((interpret-statement (cadar program)) (interpret-program (cdr program)))]
+    )
 )
 
 (define (main arglist)
