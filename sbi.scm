@@ -78,6 +78,9 @@
 
 ;; label definitions
 (define *label-table* (make-hash))
+(define (label-get key)
+        (hash-ref *label-table* key #f))
+
 (define (create-label-table program)
     (when (not (null? program))
         (when (> (length (car program)) 1)
@@ -121,6 +124,12 @@
     (newline)
 )
 
+;; control function
+(define (call-goto input)
+    (if (eq? (label-get (car input)) #f) (display "hello\n") 
+				   (interpret-program (label-get (car input))))
+)
+
 ;; function definitions
 (define *function-table* (make-hash))
 (define (function-get key)
@@ -162,6 +171,7 @@
         (rem     ,(lambda (x y) (- x (* (quot x y) y))))
         ;; real functions
         (print   ,call-print)
+	(goto	 ,call-goto)
      ))
 
 ;; takes in an expression

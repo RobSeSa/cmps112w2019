@@ -1,5 +1,6 @@
 (
-( 1 punch (print "hi!"))
-( 2 next (print " yes and more words!"))
-( 3 (print "lol"))
+( 1 (goto next))
+( 2 punch (print "hi!"))
+( 3 next (print " yes and more words!"))
+( 4 (print "lol"))
 )
