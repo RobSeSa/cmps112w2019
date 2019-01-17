@@ -126,7 +126,7 @@
 
 ;; control function
 (define (call-goto input)
-    (if (eq? (label-get (car input)) #f) (display "hello\n") 
+    (if (eq? (label-get (car input)) #f) (error "Error: Label not found~n") 
 				   (interpret-program (label-get (car input))))
 )
 
