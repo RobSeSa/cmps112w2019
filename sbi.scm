@@ -130,10 +130,17 @@
 				   (interpret-program (label-get (car input))))
 )
 
+(define (call-let input)
+    (cond [(symbol? (car input))
+	   (cond [(number? (cdr input)) (variable-put! (car input) (cadr input))]
+	         [(pair? (cdr input)) (variable-put! (car input) (eval-expr (cadr input)))]
+		 (else error "invalid input"))]
+	  [(pair? (car input)) (display "array\n")]))	
+
 ;; function definitions
 (define *function-table* (make-hash))
 (define (function-get key)
-        (hash-ref *function-table* key))
+	(hash-ref *function-table* key))
 (define (function-put! key value)
         (hash-set! *function-table* key value))
 (for-each
@@ -151,7 +158,7 @@
         (floor   ,floor)
         (log     ,log)
         (log10   ,(lambda (x) (/ (log x) (log 10.0))))
-        (log2   ,(lambda (x) (/ (log x) (log 2.0))))
+        (log2    ,(lambda (x) (/ (log x) (log 2.0))))
         (round   ,round)
         (sin     ,sin)
         (sqrt    ,sqrt)
@@ -172,6 +179,7 @@
         ;; real functions
         (print   ,call-print)
 	(goto	 ,call-goto)
+	(let	 ,call-let)
      ))
 
 ;; takes in an expression
@@ -206,8 +214,10 @@
     (cond 
 	  [ (null? program) (exit)]
 	  [ (null? (cdar program)) (interpret-program (cdr program)) ]
-	  [ (symbol? (cadar program)) ((interpret-statement (caddar program)) (interpret-program (cdr program)))]
-          [ (pair? (cadar program)) ((interpret-statement (cadar program)) (interpret-program (cdr program)))]
+	  [ (symbol? (cadar program)) ((interpret-statement (caddar program)) 
+				       (interpret-program (cdr program)))]
+          [ (pair? (cadar program)) ((interpret-statement (cadar program)) 
+				     (interpret-program (cdr program)))]
     )
 )
 
