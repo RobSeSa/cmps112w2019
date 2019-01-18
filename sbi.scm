@@ -104,7 +104,7 @@
 ;; variable definitions
 (define *variable-table* (make-hash))
 (define (variable-get key)
-        (hash-ref *variable-table* key))
+        (hash-ref *variable-table* key #f))
 (define (variable-put! key value)
         (hash-set! *variable-table* key value))
 (for-each
@@ -119,9 +119,11 @@
      ))
 
 (define (print-type arg)
-    (if (string? arg) (printf arg)
-	  (if (eqv? arg 'asub) (printf "~a" (array-element arg))
-		               (printf " ~a" (eval-expr arg)))
+    ;;(print arg)
+    (cond [(string? arg) (printf arg)]
+	  [(pair? arg) (if (eqv? (car arg) 'asub) (array-element arg) 
+						  (printf "~a" (eval-expr arg)))]
+	  (else (printf "~a" (eval-expr arg)))
     )
 )
 
@@ -140,15 +142,15 @@
 
 (define (call-let input)
     (cond [(symbol? (car input))
-	   (cond [(number? (cdr input)) (variable-put! (car input) (cadr input))]
-	         [(pair? (cdr input)) (variable-put! (car input) (eval-expr (cadr input)))]
+	   (cond [(number? (car(cdr input))) (variable-put! (car input) (cadr input))]
+	         [(pair? (car(cdr input))) (variable-put! (car input) (eval-expr (cadr input)))]
 		 (else error "invalid input"))]
 	  [(pair? (car input)) (array-put! (car(cdr(car input))) 
 			       (cond [(symbol? (car(cdr(cdr(car input)))))
 				      (variable-get (car(cdr(cdr(car input)))))]
-				     [(number? (car(cdr(cdr(car input)))))
-				      (let ((idx (car(cdr(cdr(car input))))))
-					    inexact->exact (floor idx))])
+				     (else (car(cdr(cdr(car input))))))
+				      ;;(let ((idx (car(cdr(cdr(car input))))))
+					;;    inexact->exact (floor idx))])
 			       (car(cdr input)))]))
 
 (define (call-dim input)
@@ -157,12 +159,16 @@
     (array-set! (car(cdr(car input))) (car(cdr(cdr(car input))))))
 
 (define (array-element input)
-    (cond [(number? (cdr(cdr(car input))))
-    	   (vector-ref (array-get (car(cdr(car input)))) 
-		       (cdr(cdr(car input))))]
-	  [(symbol? (cdr(cdr(car input))))
-	   (vector-ref (array-get (car(cdr(car input)))) 
-		       (variable-get (cdr(cdr(car input)))))
+    ;;(hash-for-each *variable-table* (lambda (key value) (show key value)))
+    ;;(hash-for-each *array-table* (lambda (key value) (show key value)))
+    ;;(newline)
+    ;;(display (car (cdr(cdr input))))
+    (cond [(number? (car(cdr(cdr input))))
+    	   (display (vector-ref (array-get (car(cdr input))) 
+		       (cdr(cdr input))))]
+	  [(symbol? (car(cdr(cdr input))))
+	   (display (vector-ref (array-get (car(cdr input))) 
+		       (variable-get (car(cdr(cdr input))))))
 ]))
 
 ;; function definitions
@@ -264,9 +270,3 @@
 
 (when (terminal-port? *stdin*)
       (main (vector->list (current-command-line-arguments))))
-
-
-;;
-;;
-
-
