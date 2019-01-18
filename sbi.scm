@@ -136,9 +136,8 @@
 
 ;; control function
 (define (call-goto input)
-    (if (eq? (label-get (car input)) #f) (error "Error: Label not found~n") 
-				   (interpret-program (label-get (car input))))
-)
+    (if (eq? (label-get (car input)) #f) (error "Error: Label not found~n")
+	(interpret-program (label-get (car input)))))
 
 (define (call-let input)
     (cond [(symbol? (car input))
@@ -234,6 +233,8 @@
 
 (define (execute-program program)
     (create-label-table program)
+    ;;(hash-for-each *label-table* (lambda (key value) (show key value)))
+    ;;(newline)
 ;    (print-table *label-table*)
 ;    (print-table *variable-table*)
 ;    (print-table *function-table*)
@@ -249,8 +250,9 @@
     (cond 
 	  [ (null? program) (exit)]
 	  [ (null? (cdar program)) (interpret-program (cdr program)) ]
-	  [ (symbol? (cadar program)) ((interpret-statement (caddar program)) 
-				       (interpret-program (cdr program)))]
+	  [ (symbol? (cadar program)) (if (null? (cdr program)) (exit) 
+					  ((interpret-statement (caddar program)) 
+					  (interpret-program (cdr program))))]
           [ (pair? (cadar program)) ((interpret-statement (cadar program)) 
 				     (interpret-program (cdr program)))]
     )
