@@ -94,6 +94,13 @@
 )
 
 (define *array-table* (make-hash))
+(define (array-get key)
+	(hash-ref *array-table* key #f))
+(define (array-set! key len)
+	(hash-set! *array-table* key (make-vector len 0.0)))
+(define (array-put! key idx value)
+	(vector-set! (array-get key) idx value))
+
 ;; variable definitions
 (define *variable-table* (make-hash))
 (define (variable-get key)
@@ -113,7 +120,8 @@
 
 (define (print-type arg)
     (if (string? arg) (printf arg)
-        (printf " ~a" (eval-expr arg))
+	  (if (eqv? arg 'asub) (printf "~a" (array-element arg))
+		               (printf " ~a" (eval-expr arg)))
     )
 )
 
@@ -135,7 +143,27 @@
 	   (cond [(number? (cdr input)) (variable-put! (car input) (cadr input))]
 	         [(pair? (cdr input)) (variable-put! (car input) (eval-expr (cadr input)))]
 		 (else error "invalid input"))]
-	  [(pair? (car input)) (display "array\n")]))	
+	  [(pair? (car input)) (array-put! (car(cdr(car input))) 
+			       (cond [(symbol? (car(cdr(cdr(car input)))))
+				      (variable-get (car(cdr(cdr(car input)))))]
+				     [(number? (car(cdr(cdr(car input)))))
+				      (let ((idx (car(cdr(cdr(car input))))))
+					    inexact->exact (floor idx))])
+			       (car(cdr input)))]))
+
+(define (call-dim input)
+    ;;(display car(car(cdr(car input))))
+    ;;(display car(car(cdr(cdr(car input))))))
+    (array-set! (car(cdr(car input))) (car(cdr(cdr(car input))))))
+
+(define (array-element input)
+    (cond [(number? (cdr(cdr(car input))))
+    	   (vector-ref (array-get (car(cdr(car input)))) 
+		       (cdr(cdr(car input))))]
+	  [(symbol? (cdr(cdr(car input))))
+	   (vector-ref (array-get (car(cdr(car input)))) 
+		       (variable-get (cdr(cdr(car input)))))
+]))
 
 ;; function definitions
 (define *function-table* (make-hash))
@@ -180,6 +208,7 @@
         (print   ,call-print)
 	(goto	 ,call-goto)
 	(let	 ,call-let)
+	(dim	 ,call-dim)
      ))
 
 ;; takes in an expression
