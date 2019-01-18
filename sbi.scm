@@ -119,11 +119,8 @@
      ))
 
 (define (print-type arg)
-    ;;(print arg)
-    (cond [(string? arg) (printf arg)]
-	  [(pair? arg) (if (eqv? (car arg) 'asub) (array-element arg) 
-						  (printf "~a" (eval-expr arg)))]
-	  (else (printf "~a" (eval-expr arg)))
+    (if (string? arg) (printf arg)
+		      (printf "~a" (eval-expr arg))
     )
 )
 
@@ -148,28 +145,28 @@
 	  [(pair? (car input)) (array-put! (car(cdr(car input))) 
 			       (cond [(symbol? (car(cdr(cdr(car input)))))
 				      (variable-get (car(cdr(cdr(car input)))))]
-				     (else (car(cdr(cdr(car input))))))
+				     (else (eval-expr (car(cdr(cdr(car input)))))))
 				      ;;(let ((idx (car(cdr(cdr(car input))))))
 					;;    inexact->exact (floor idx))])
-			       (car(cdr input)))]))
+			       (eval-expr (car(cdr input))))]))
 
 (define (call-dim input)
     ;;(display car(car(cdr(car input))))
     ;;(display car(car(cdr(cdr(car input))))))
     (array-set! (car(cdr(car input))) (car(cdr(cdr(car input))))))
 
-(define (array-element input)
+;;(define (array-element input)
     ;;(hash-for-each *variable-table* (lambda (key value) (show key value)))
     ;;(hash-for-each *array-table* (lambda (key value) (show key value)))
     ;;(newline)
     ;;(display (car (cdr(cdr input))))
-    (cond [(number? (car(cdr(cdr input))))
-    	   (display (vector-ref (array-get (car(cdr input))) 
-		       (cdr(cdr input))))]
-	  [(symbol? (car(cdr(cdr input))))
-	   (display (vector-ref (array-get (car(cdr input))) 
-		       (variable-get (car(cdr(cdr input))))))
-]))
+  ;;  (cond [(number? (car(cdr(cdr input))))
+    ;;	   (printf "~a" (vector-ref (array-get (car(cdr input))) 
+;;		       (cdr(cdr input))))]
+;;	  [(symbol? (car(cdr(cdr input))))
+;;	   (printf "~a" (vector-ref (array-get (car(cdr input))) 
+;;		       (variable-get (car(cdr(cdr input))))))
+;;]))
 
 (define (call-if input)
     ;(display (car(cdr input)))
@@ -184,6 +181,11 @@
 	(if (eq? (label-get (car(cdr input))) #f) 
 	    (error "label doesn't exist: ")
 	    (interpret-program (label-get (car(cdr input)))))]))
+
+(define (call-input input)
+   (let ((stdin (read)))
+	(display stdin))
+	(newline))
 
 ;; function definitions
 (define *function-table* (make-hash))
@@ -223,7 +225,7 @@
 	(=	 ,=)
 	(>=	 ,>=)
 	(<=	 ,<=)
-	(<>	 ,(lambda (x y) (not(= x y))))
+	(<>	 ,(lambda (x y) (not (= x y))))
         ;; unecessary functions
         (log10_2 0.301029995663981195213738894724493026768189881)
         (sqrt_2  1.414213562373095048801688724209698078569671875)
@@ -235,17 +237,19 @@
 	(goto	 ,call-goto)
 	(let	 ,call-let)
 	(dim	 ,call-dim)
+	(asub	 ,(lambda (x y) (vector-ref x y))) 
 	(if	 ,call-if)
+	(input	 ,call-input)
      ))
 
 ;; takes in an expression
 (define (eval-expr statement)
     (cond [(number? statement) (+ statement 0.0)]
-          [(symbol? statement) (cond [(not (eq? (hash-ref *variable-table* statement 0) 0)) 
-					(hash-ref *variable-table* statement 0)]
-					[(not (eq? (hash-ref *array-table* statement 0) 0))
-					(hash-ref *array-table* statement 0)]
-					(else 0))
+          [(symbol? statement) (cond [(not (eq? (hash-ref *variable-table* statement #f) #f)) 
+						(hash-ref *variable-table* statement 0)]
+				     [(not (eq? (hash-ref *array-table* statement #f) #f))
+						(hash-ref *array-table* statement 0)]
+				     (else 0))
 	  ]
 	  [(pair? statement) (apply (hash-ref *function-table* (car statement) #f)
                                     (map eval-expr (cdr statement)))]
