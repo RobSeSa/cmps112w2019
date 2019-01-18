@@ -142,7 +142,8 @@
 (define (call-let input)
     (cond [(symbol? (car input))
 	   (cond [(number? (car(cdr input))) (variable-put! (car input) (cadr input))]
-	         [(pair? (car(cdr input))) (variable-put! (car input) (eval-expr (cadr input)))]
+	         [(or (pair? (car(cdr input)))(symbol? (car(cdr input)))) 
+		      (variable-put! (car input) (eval-expr (cadr input)))]
 		 (else error "invalid input"))]
 	  [(pair? (car input)) (array-put! (car(cdr(car input))) 
 			       (cond [(symbol? (car(cdr(cdr(car input)))))
@@ -170,10 +171,24 @@
 		       (variable-get (car(cdr(cdr input))))))
 ]))
 
+(define (call-if input)
+    ;(display (car(cdr input)))
+    ;(newline)
+    ;(display (cdr input))
+    ;(newline)
+    ;(hash-for-each *label-table* (lambda (key value) (show key value)))
+    ;(display (label-get (car(cdr input))))
+    ;(newline)
+    ;;(if (eqv? (car(car input)) '<>) (display "blah")
+    (cond [(eq? (eval-expr (car input)) #t) 
+	(if (eq? (label-get (car(cdr input))) #f) 
+	    (error "label doesn't exist: ")
+	    (interpret-program (label-get (car(cdr input)))))]))
+
 ;; function definitions
 (define *function-table* (make-hash))
 (define (function-get key)
-	(hash-ref *function-table* key))
+	(hash-ref *function-table* key #f))
 (define (function-put! key value)
         (hash-set! *function-table* key value))
 (for-each
@@ -203,6 +218,12 @@
         (/       ,/)
         (%       ,(lambda (x y) (- x (* (div x y) y))))
         (^       ,expt)
+	(<	 ,<)
+	(>	 ,>)
+	(=	 ,=)
+	(>=	 ,>=)
+	(<=	 ,<=)
+	(<>	 ,(lambda (x y) (not(= x y))))
         ;; unecessary functions
         (log10_2 0.301029995663981195213738894724493026768189881)
         (sqrt_2  1.414213562373095048801688724209698078569671875)
@@ -214,6 +235,7 @@
 	(goto	 ,call-goto)
 	(let	 ,call-let)
 	(dim	 ,call-dim)
+	(if	 ,call-if)
      ))
 
 ;; takes in an expression
@@ -250,9 +272,10 @@
     (cond 
 	  [ (null? program) (exit)]
 	  [ (null? (cdar program)) (interpret-program (cdr program)) ]
-	  [ (symbol? (cadar program)) (if (null? (cdr program)) (exit) 
-					  ((interpret-statement (caddar program)) 
-					  (interpret-program (cdr program))))]
+	  [ (symbol? (cadar program)) (cond [(null? (cdr program)) (exit)]
+					    [(null? (caddar program)) (interpret-program (cdr program))]
+					    (else ((interpret-statement (caddar program)) 
+						   (interpret-program (cdr program)))))]
           [ (pair? (cadar program)) ((interpret-statement (cadar program)) 
 				     (interpret-program (cdr program)))]
     )
