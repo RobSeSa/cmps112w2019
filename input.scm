@@ -1,0 +1,6 @@
+(define (take-user-input)
+     (display "enter something: ")
+     (let (input read)
+         (printf "input is ~s~n" input))
+     (take-user-input) 
+)     

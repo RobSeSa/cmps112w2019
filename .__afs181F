@@ -138,21 +138,14 @@
 
 (define (call-let input)
     (cond [(symbol? (car input))
-          ;variable
 	   (cond [(number? (car(cdr input))) (variable-put! (car input) (cadr input))]
-		 ;const number for value of variable
 	         [(or (pair? (car(cdr input)))(symbol? (car(cdr input)))) 
-		 ;variable or expression for value of variable
 		      (variable-put! (car input) (eval-expr (cadr input)))]
 		 (else (display "invalid input" *stderr*)))]
-	  ;Arrayref
 	  [(pair? (car input)) 
-		  ;when array is in the array table
 		  (when (not (eq? (array-get (car(cdr(car input)))) #f))
-			;when vector-length >= index expression
-			;changed variable-get to eval-expr in this when conditional
 			(when (>= (vector-length (array-get (car(cdr(car input)))))
-						(eval-expr (car(cdr(cdr(car input))))))
+						(variable-get (car(cdr(cdr(car input))))))
 			      (array-put! (car(cdr(car input)))
 					  (cond [(symbol? (car(cdr(cdr(car input)))))
 						(- (variable-get (car(cdr(cdr(car input))))) 1)]
@@ -167,16 +160,42 @@
 )
 
 (define (call-dim input)
+    ;;(display car(car(cdr(car input))))
+    ;;(display car(car(cdr(cdr(car input))))))
     (array-set! (car(cdr(car input))) (eval-expr (car(cdr(cdr(car input))))))) 
 
+;;(define (array-element input)
+    ;;(hash-for-each *variable-table* (lambda (key value) (show key value)))
+    ;;(hash-for-each *array-table* (lambda (key value) (show key value)))
+    ;;(newline)
+    ;;(display (car (cdr(cdr input))))
+  ;;  (cond [(number? (car(cdr(cdr input))))
+    ;;	   (printf "~a" (vector-ref (array-get (car(cdr input))) 
+;;		       (cdr(cdr input))))]
+;;	  [(symbol? (car(cdr(cdr input))))
+;;	   (printf "~a" (vector-ref (array-get (car(cdr input))) 
+;;		       (variable-get (car(cdr(cdr input))))))
+;;]))
+
 (define (call-if input)
+    ;(display (car(cdr input)))
+    ;(newline)
+    ;(display (cdr input))
+    ;(newline)
+    ;(hash-for-each *label-table* (lambda (key value) (show key value)))
+    ;(display (label-get (car(cdr input))))
+    ;(newline)
+    ;;(if (eqv? (car(car input)) '<>) (display "blah")
     (cond [(eq? (eval-expr (car input)) #t) 
 	(if (eq? (label-get (car(cdr input))) #f) 
 	    (display "label doesn't exist: " *stderr*)
 	    (interpret-program (label-get (car(cdr input)))))]))
 
 (define (call-input input)
+    ;;(printf "~a input: " (car input))
     (let ((stdin (read)))
+	  ;;(display stdin)
+          ;;(newline))
 	  (cond [(eof-object? stdin) ((variable-put! 'eof 1)
 				      (variable-put! (car input) stdin))]
 		[(number? stdin) (variable-put! (car input) stdin)]
@@ -234,7 +253,7 @@
 	(goto	 ,call-goto)
 	(let	 ,call-let)
 	(dim	 ,call-dim)
-	(asub	 ,(lambda (x y) (vector-ref x (- (inexact->exact y) 1)))) 
+	(asub	 ,(lambda (x y) (vector-ref x y))) 
 	(if	 ,call-if)
 	(input	 ,call-input)
      ))
@@ -256,6 +275,12 @@
 
 (define (execute-program program)
     (create-label-table program)
+    ;;(hash-for-each *label-table* (lambda (key value) (show key value)))
+    ;;(newline)
+;    (print-table *label-table*)
+;    (print-table *variable-table*)
+;    (print-table *function-table*)
+    ;(print-each-car program)
     (interpret-program program)
 )
 
