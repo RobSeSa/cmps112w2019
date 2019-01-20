@@ -148,7 +148,7 @@
 	  ;Arrayref
 	  [(pair? (car input)) 
 		  ;when array is in the array table
-		  (when (not (eq? (array-get (car(cdr(car input)))) #f))
+		  (if (not (eq? (array-get (car(cdr(car input)))) #f))
 			;when vector-length >= index expression
 			;changed variable-get to eval-expr in this when conditional
 			(if (>= (vector-length (array-get (car(cdr(car input)))))
@@ -160,8 +160,8 @@
 				      ;;(let ((idx (car(cdr(cdr(car input))))))
 					;;    inexact->exact (floor idx))])
 			       (eval-expr (car(cdr input))))
-			((display "Array out of bounds" *stderr*) (exit 1))
-			)
+			((display "Array out of bounds" *stderr*) (exit 1)))
+			(display "Array doesn't exist" *stderr* (exit 1))
 		  )
 	  ]
     )
