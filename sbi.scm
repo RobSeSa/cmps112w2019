@@ -133,7 +133,7 @@
 
 ;; control function
 (define (call-goto input)
-    (if (eq? (label-get (car input)) #f) (display "Label not found~n" *stderr*)
+    (if (eq? (label-get (car input)) #f) ((display "Label not found~n" *stderr*) (exit 1))
 	(interpret-program (label-get (car input)))))
 
 (define (call-let input)
@@ -144,14 +144,14 @@
 	         [(or (pair? (car(cdr input)))(symbol? (car(cdr input)))) 
 		 ;variable or expression for value of variable
 		      (variable-put! (car input) (eval-expr (cadr input)))]
-		 (else (display "invalid input" *stderr*)))]
+		 (else ((display "invalid input" *stderr*) (exit 1))))]
 	  ;Arrayref
 	  [(pair? (car input)) 
 		  ;when array is in the array table
 		  (when (not (eq? (array-get (car(cdr(car input)))) #f))
 			;when vector-length >= index expression
 			;changed variable-get to eval-expr in this when conditional
-			(when (>= (vector-length (array-get (car(cdr(car input)))))
+			(if (>= (vector-length (array-get (car(cdr(car input)))))
 						(eval-expr (car(cdr(cdr(car input))))))
 			      (array-put! (car(cdr(car input)))
 					  (cond [(symbol? (car(cdr(cdr(car input)))))
@@ -160,6 +160,7 @@
 				      ;;(let ((idx (car(cdr(cdr(car input))))))
 					;;    inexact->exact (floor idx))])
 			       (eval-expr (car(cdr input))))
+			((display "Array out of bounds" *stderr*) (exit 1))
 			)
 		  )
 	  ]
@@ -172,7 +173,7 @@
 (define (call-if input)
     (cond [(eq? (eval-expr (car input)) #t) 
 	(if (eq? (label-get (car(cdr input))) #f) 
-	    (display "label doesn't exist: " *stderr*)
+	    ((display "label doesn't exist: " *stderr*) (exit 1))
 	    (interpret-program (label-get (car(cdr input)))))]))
 
 (define (call-input input)
