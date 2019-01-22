@@ -85,8 +85,10 @@
     (when (not (null? program))
         (when (> (length (car program)) 1)
             (cond [(symbol? (cadr (car program))) 
-                ;store the 2nd object in the line as the key and the line number as the value
-                (hash-set! *label-table* (cadr (car program)) program)])
+                ;store the 2nd object in the line as the key and the 
+                ;line number as the value
+                (hash-set! *label-table* (cadr (car program)) 
+                                          program)])
             ;repeat recursively on the rest of the lines
         )
         (create-label-table (cdr program))
@@ -95,11 +97,12 @@
 
 (define *array-table* (make-hash))
 (define (array-get key)
-	(hash-ref *array-table* key #f))
+    (hash-ref *array-table* key #f))
 (define (array-set! key len)
-	(hash-set! *array-table* key (make-vector (inexact->exact len) 0.0)))
+    (hash-set! *array-table* key (make-vector (inexact->exact len) 
+                                               0.0)))
 (define (array-put! key idx value)
-	(vector-set! (array-get key) (inexact->exact idx) value))
+    (vector-set! (array-get key) (inexact->exact idx) value))
 
 ;; variable definitions
 (define *variable-table* (make-hash))
@@ -120,7 +123,7 @@
 
 (define (print-type arg)
     (if (string? arg) (printf arg)
-		      (printf "~a" (eval-expr arg))
+        (printf "~a" (eval-expr arg))
     )
 )
 
@@ -133,65 +136,69 @@
 
 ;; control function
 (define (call-goto input)
-    (if (eq? (label-get (car input)) #f) ((display "Label not found~n" *stderr*) (exit 1))
-	(interpret-program (label-get (car input)))))
+    (if (eq? (label-get (car input)) #f) 
+             ((display "Label not found~n" *stderr*) 
+             (exit 1))
+        (interpret-program (label-get (car input)))))
 
 (define (call-let input)
     (cond [(symbol? (car input))
-          ;variable
-	   (cond [(number? (car(cdr input))) (variable-put! (car input) (cadr input))]
-		 ;const number for value of variable
-	         [(or (pair? (car(cdr input)))(symbol? (car(cdr input)))) 
-		 ;variable or expression for value of variable
-		      (variable-put! (car input) (eval-expr (cadr input)))]
-		 (else ((display "invalid input" *stderr*) (exit 1))))]
-	  ;Arrayref
-	  [(pair? (car input)) 
-		  ;when array is in the array table
-		  (if (not (eq? (array-get (car(cdr(car input)))) #f))
-			;when vector-length >= index expression
-			;changed variable-get to eval-expr in this when conditional
-			(if (>= (vector-length (array-get (car(cdr(car input)))))
-						(eval-expr (car(cdr(cdr(car input))))))
-			      (array-put! (car(cdr(car input)))
-					  (cond [(symbol? (car(cdr(cdr(car input)))))
-						(- (variable-get (car(cdr(cdr(car input))))) 1)]
-					  (else (- (eval-expr (car(cdr(cdr(car input))))) 1)))
-				      ;;(let ((idx (car(cdr(cdr(car input))))))
-					;;    inexact->exact (floor idx))])
-			       (eval-expr (car(cdr input))))
-			((display "Array out of bounds" *stderr*) (exit 1)))
-			(display "Array doesn't exist" *stderr* (exit 1))
-		  )
-	  ]
-    )
-)
+        ;variable
+        (cond [(number? (car(cdr input))) 
+               (variable-put! (car input) (cadr input))]
+               ;const number for value of variable
+               [(or (pair? (car(cdr input)))
+                    (symbol? (car(cdr input))))
+               ;variable or expression for value of variable
+               (variable-put! (car input) (eval-expr (cadr input)))]
+        (else ((display "invalid input" *stderr*) (exit 1))))]
+        ;;Arrayref
+        [(pair? (car input)) 
+            ;;when array is in the array table
+            (if (not (eq? (array-get (car(cdr(car input)))) #f))
+                ;;when vector-length >= index expression
+                ;;changed variable-get to eval-expr in this 
+                ;;when conditional
+                (if (>= (vector-length 
+                        (array-get (car(cdr(car input)))))
+                    (eval-expr (car(cdr(cdr(car input))))))
+                    (array-put! (car(cdr(car input)))
+                        (cond [(symbol? (car(cdr(cdr(car input)))))
+                            (- (variable-get 
+                               (car(cdr(cdr(car input))))) 1)]
+                        (else (- (eval-expr 
+                                 (car(cdr(cdr(car input))))) 1)))
+                         ;;(let ((idx (car(cdr(cdr(car input))))))
+                         ;;    inexact->exact (floor idx))])
+                    (eval-expr (car(cdr input))))
+                ((display "Array out of bounds" *stderr*) (exit 1)))
+            (display "Array doesn't exist" *stderr* (exit 1)))]))
 
 (define (call-dim input)
-    (array-set! (car(cdr(car input))) (eval-expr (car(cdr(cdr(car input))))))) 
+    (array-set! (car(cdr(car input))) 
+                (eval-expr (car(cdr(cdr(car input)))))))
 
 (define (call-if input)
     (cond [(eq? (eval-expr (car input)) #t) 
-	(if (eq? (label-get (car(cdr input))) #f) 
-	    ((display "label doesn't exist: " *stderr*) (exit 1))
-	    (interpret-program (label-get (car(cdr input)))))]))
+          (if (eq? (label-get (car(cdr input))) #f) 
+              ((display "label doesn't exist: " *stderr*) (exit 1))
+              (interpret-program (label-get (car(cdr input)))))]))
 
 (define (call-input input)
     (when (= (eval-expr 'eof) 0)
         (let ((stdin (read)))
-	      (cond [(eof-object? stdin) (variable-put! 'eof 1)
-	    			         ]
-	  	    [(number? stdin) (variable-put! (car input) stdin)]
-		    (else (variable-put! (car input) (eval-expr 'nan)))))
+            (cond [(eof-object? stdin) (variable-put! 'eof 1)]
+                  [(number? stdin) (variable-put! (car input) stdin)]
+                  (else (variable-put! (car input) (eval-expr 'nan)))))
         (when (not (null? (cdr input)))
             (call-input (cdr input)))))
 
 ;; function definitions
 (define *function-table* (make-hash))
 (define (function-get key)
-	(hash-ref *function-table* key #f))
+    (hash-ref *function-table* key #f))
 (define (function-put! key value)
-        (hash-set! *function-table* key value))
+    (hash-set! *function-table* key value))
 (for-each
     (lambda (pair)
             (function-put! (car pair) (cadr pair)))
@@ -219,12 +226,12 @@
         (/       ,/)
         (%       ,(lambda (x y) (- x (* (div x y) y))))
         (^       ,expt)
-	(<	 ,<)
-	(>	 ,>)
-	(=	 ,=)
-	(>=	 ,>=)
-	(<=	 ,<=)
-	(<>	 ,(lambda (x y) (not (= x y))))
+        (<       ,<)
+        (>       ,>)
+        (=       ,=)
+        (>=      ,>=)
+        (<=      ,<=)
+        (<>      ,(lambda (x y) (not (= x y))))
         ;; unecessary functions
         (log10_2 0.301029995663981195213738894724493026768189881)
         (sqrt_2  1.414213562373095048801688724209698078569671875)
@@ -233,51 +240,48 @@
         (rem     ,(lambda (x y) (- x (* (quot x y) y))))
         ;; real functions
         (print   ,call-print)
-	(goto	 ,call-goto)
-	(let	 ,call-let)
-	(dim	 ,call-dim)
-	(asub	 ,(lambda (x y) (vector-ref x (- (inexact->exact y) 1)))) 
-	(if	 ,call-if)
-	(input	 ,call-input)
+        (goto    ,call-goto)
+        (let     ,call-let)
+        (dim     ,call-dim)
+        (asub    ,(lambda (x y) (vector-ref x 
+                                    (- (inexact->exact y) 1))))
+        (if      ,call-if)
+        (input   ,call-input)
      ))
 
 ;; takes in an expression
 (define (eval-expr statement)
     (cond [(number? statement) (+ statement 0.0)]
-          [(symbol? statement) (cond [(not (eq? (hash-ref *variable-table* statement #f) #f)) 
-						(+ (hash-ref *variable-table* statement 0) 0.0)]
-				     [(not (eq? (hash-ref *array-table* statement #f) #f))
-						(hash-ref *array-table* statement 0)]
-				     (else 0))
-	  ]
-	  [(pair? statement) (apply (hash-ref *function-table* (car statement) #f)
-                                    (map eval-expr (cdr statement)))]
-    )
-)
-
+          [(symbol? statement) 
+              (cond [(not (eq? 
+                    (hash-ref *variable-table* statement #f) #f)) 
+                  (+ (hash-ref *variable-table* statement 0) 0.0)]
+                   [(not (eq? (hash-ref *array-table* statement #f) #f))
+                       (hash-ref *array-table* statement 0)]
+                   (else 0))]
+          [(pair? statement) 
+              (apply (hash-ref *function-table* (car statement) #f)
+              (map eval-expr (cdr statement)))]))
 
 (define (execute-program program)
     (create-label-table program)
-    (interpret-program program)
-)
+    (interpret-program program))
 
 (define (interpret-statement input)
-    ((function-get (car input)) (cdr input))
-)
+    ((function-get (car input)) (cdr input)))
 
 (define (interpret-program program)
-    (cond 
-	  [ (null? program) (exit)]
-	  [ (null? (cdar program)) (interpret-program (cdr program)) ]
-	  [ (symbol? (cadar program)) ((when (not (null? (cddar program)))
-					    (interpret-statement (caddar program)))
-				      (if (not (null? (cdr program)))
-					    (interpret-program (cdr program))
-					    (exit)))]
-          [ (pair? (cadar program)) ((interpret-statement (cadar program)) 
-				     (interpret-program (cdr program)))]
-    )
-)
+    (cond [(null? program) (exit)]
+          [(null? (cdar program)) (interpret-program (cdr program))]
+          [(symbol? (cadar program)) 
+              ((when (not (null? (cddar program)))
+                  (interpret-statement (caddar program)))
+                  (if (not (null? (cdr program)))
+                      (interpret-program (cdr program))
+                      (exit)))]
+          [(pair? (cadar program)) 
+              ((interpret-statement (cadar program))
+              (interpret-program (cdr program)))]))
 
 (define (main arglist)
     (if (or (null? arglist) (not (null? (cdr arglist))))
@@ -285,11 +289,7 @@
         (let* (  (sbprogfile (car arglist))
                  (program (readlist-from-inputfile sbprogfile)))
               ;(write-program-by-line sbprogfile program)
-              (execute-program program)
-        )
-    )
-)
-
+              (execute-program program))))
 
 ;;(when (terminal-port? *stdin*)
-      (main (vector->list (current-command-line-arguments))))
+(main (vector->list (current-command-line-arguments)))

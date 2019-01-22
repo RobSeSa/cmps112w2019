@@ -52,7 +52,7 @@
 (    6          )
 (    7          )
 (    8          )
-(    9          (let size 5))
+(    9          (let size 100))
 (   10          (dim (asub a size)))
 (   11          (let max 0))
 (   12 read     (input x))
