@@ -97,7 +97,7 @@
 (define (array-get key)
 	(hash-ref *array-table* key #f))
 (define (array-set! key len)
-	(hash-set! *array-table* key (make-vector len 0.0)))
+	(hash-set! *array-table* key (make-vector (inexact->exact len) 0.0)))
 (define (array-put! key idx value)
 	(vector-set! (array-get key) (inexact->exact idx) value))
 
@@ -245,7 +245,7 @@
 (define (eval-expr statement)
     (cond [(number? statement) (+ statement 0.0)]
           [(symbol? statement) (cond [(not (eq? (hash-ref *variable-table* statement #f) #f)) 
-						(hash-ref *variable-table* statement 0)]
+						(+ (hash-ref *variable-table* statement 0) 0.0)]
 				     [(not (eq? (hash-ref *array-table* statement #f) #f))
 						(hash-ref *array-table* statement 0)]
 				     (else 0))
