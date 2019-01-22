@@ -177,13 +177,14 @@
 	    (interpret-program (label-get (car(cdr input)))))]))
 
 (define (call-input input)
-    (let ((stdin (read)))
-	  (cond [(eof-object? stdin) ((variable-put! 'eof 1)
-				      (variable-put! (car input) stdin))]
-		[(number? stdin) (variable-put! (car input) stdin)]
-		(else (variable-put! (car input) nan))))
-    (when (not (null? (cdr input)))
-        (call-input (cdr input))))
+    (when (= (eval-expr 'eof) 0)
+        (let ((stdin (read)))
+	      (cond [(eof-object? stdin) (variable-put! 'eof 1)
+	    			         ]
+	  	    [(number? stdin) (variable-put! (car input) stdin)]
+		    (else (variable-put! (car input) (eval-expr 'nan)))))
+        (when (not (null? (cdr input)))
+            (call-input (cdr input)))))
 
 ;; function definitions
 (define *function-table* (make-hash))
@@ -290,5 +291,5 @@
 )
 
 
-(when (terminal-port? *stdin*)
+;;(when (terminal-port? *stdin*)
       (main (vector->list (current-command-line-arguments))))
