@@ -1,5 +1,8 @@
 #!/afs/cats.ucsc.edu/courses/cmps112-wm/usr/racket/bin/mzscheme -qr
-;; $Id: sbi.scm,v 1.5 2019-01-04 17:04:42-08 - - $
+;; $Id: sbi.scm,v 1.5 2019-01-22 15:41:42-08 - - $
+;;
+;; Robert Sato; rssato
+;; Huanlei Wu; hwu43
 ;;
 ;; NAME
 ;;    sbi.scm - silly basic interpreter
@@ -8,8 +11,7 @@
 ;;    sbi.scm filename.sbir
 ;;
 ;; DESCRIPTION
-;;    The file mentioned in argv[1] is read and assumed to be an SBIR
-;;    program, which is the executed.  Currently it is only printed.
+;; Take in a silly basic file and interpret it
 ;;
 
 (define *stdin* (current-input-port))
@@ -123,7 +125,7 @@
 
 (define (print-type arg)
     (if (string? arg) (printf arg)
-        (printf "~a" (eval-expr arg))
+        (printf " ~a" (eval-expr arg))
     )
 )
 
