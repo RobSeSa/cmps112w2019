@@ -63,10 +63,10 @@ tables.mli : tables.ml absyn.cmi
 #
 
 clean :
-	- rm ${OBJCMI} ${OBJCMO} ${OBJBIN} tables.mli
+	- rm -f ${OBJCMI} ${OBJCMO} ${OBJBIN}
 
 spotless : clean
-	- rm ${EXECBIN} ${GENFILES} ${LISTING} ${LISTING:.ps=.pdf} 
+	- rm -f ${EXECBIN} ${GENFILES} ${LISTING} ${LISTING:.ps=.pdf} 
 
 ci : ${ALLSOURCES}
 	cid + ${ALLSOURCES}
