@@ -6,8 +6,8 @@ let unimpl reason = raise (Unimplemented reason)
 let rec eval_expr (expr : Absyn.expr) : float = match expr with
     | Absyn.Number number -> number
     | Absyn.Memref memref -> unimpl "eval_expr Memref"
-    | Absyn.Unary (oper, expr) -> unimpl "eval_expr Unary"
-    | Absyn.Binary (oper, expr1, expr2) -> unimpl "eval_expr Binary"
+    | Absyn.Unary (oper, expr) -> (Hashtbl.find Tables.unary_fn_table oper) (eval_expr expr)
+    | Absyn.Binary (oper, expr1, expr2) -> (Hashtbl.find Tables.binary_fn_table oper) (eval_expr expr1) (eval_expr expr2)
 
 let interp_print (print_list : Absyn.printable list) =
     let print_item item =
