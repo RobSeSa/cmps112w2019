@@ -6,10 +6,16 @@ let unimpl reason = raise (Unimplemented reason)
 let rec eval_expr (expr : Absyn.expr) : float = match expr with
     | Absyn.Number number -> number
     | Absyn.Memref memref -> (match memref with 
-        | Absyn.Variable ident -> Hashtbl.find Tables.variable_table ident
-        | Absyn.Arrayref (ident, expr) -> Array.get (Hashtbl.find Tables.array_table ident) (int_of_float (eval_expr expr)))
-    | Absyn.Unary (oper, expr) -> (Hashtbl.find Tables.unary_fn_table oper) (eval_expr expr)
-    | Absyn.Binary (oper, expr1, expr2) -> (Hashtbl.find Tables.binary_fn_table oper) (eval_expr expr1) (eval_expr expr2)
+        | Absyn.Variable ident -> Hashtbl.find 
+                                  Tables.variable_table ident
+        | Absyn.Arrayref (ident, expr) ->
+            Array.get (Hashtbl.find Tables.array_table ident) 
+                      (int_of_float (eval_expr expr)))
+    | Absyn.Unary (oper, expr) -> 
+        (Hashtbl.find Tables.unary_fn_table oper) (eval_expr expr)
+    | Absyn.Binary (oper, expr1, expr2) -> 
+        (Hashtbl.find Tables.binary_fn_table oper) 
+        (eval_expr expr1) (eval_expr expr2)
 
 let interp_print (print_list : Absyn.printable list) =
     let print_item item =
@@ -24,10 +30,12 @@ let interp_print (print_list : Absyn.printable list) =
 
 let interp_input (memref_list : Absyn.memref list) =
     let input_number (memref : Absyn.memref) =
-        try  let number = Etc.read_number ()
-             in  match memref with
-                          | Absyn.Variable ident -> Hashtbl.add Tables.variable_table ident number
-                          | Absyn.Arrayref (ident, expr) -> Hashtbl.add Tables.variable_table ident (eval_expr expr) 
+        try let number = Etc.read_number ()
+            in match memref with
+            | Absyn.Variable ident -> 
+                Hashtbl.add Tables.variable_table ident number
+            | Absyn.Arrayref (ident, expr) -> 
+                Hashtbl.add Tables.variable_table ident (eval_expr expr)
         with End_of_file -> 
              (print_string "End_of_file"; print_newline ())
     in List.iter input_number memref_list
