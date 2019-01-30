@@ -51,7 +51,7 @@ let interp_input (memref_list : Absyn.memref list) =
 let interp_stmt (stmt : Absyn.stmt) = match stmt with
     | Absyn.Dim (ident, expr) -> interp_dim (ident, expr)
     | Absyn.Let (memref, expr) -> interp_let (memref, expr)
-    | Absyn.Goto labsl -> unimpl "Goto labsl"
+    | Absyn.Goto label -> unimpl "Goto labsl"
     | Absyn.If (expr, label) -> unimpl "If (expr, label)"
     | Absyn.Print print_list -> interp_print print_list
     | Absyn.Input memref_list -> interp_input memref_list
