@@ -17,6 +17,14 @@ let rec eval_expr (expr : Absyn.expr) : float = match expr with
         (Hashtbl.find Tables.binary_fn_table oper) 
         (eval_expr expr1) (eval_expr expr2)
 
+let interp_dim ((ident : Absyn.ident), (expr : Absyn.expr)) =
+    Hashtbl.add Tables.array_table ident (Array.make (int_of_float (eval_expr expr)) 0.)
+
+let interp_let ((memref : Absyn.memref), (expr : Absyn.expr)) =
+    match memref with
+        | Absyn.Variable ident -> Hashtbl.add Tables.variable_table ident (eval_expr expr)
+        | Absyn.Arrayref (ident, index) -> Array.set (Hashtbl.find Tables.array_table ident) (int_of_float (eval_expr index)) (eval_expr expr)
+
 let interp_print (print_list : Absyn.printable list) =
     let print_item item =
         (print_char ' ';
@@ -41,8 +49,8 @@ let interp_input (memref_list : Absyn.memref list) =
     in List.iter input_number memref_list
 
 let interp_stmt (stmt : Absyn.stmt) = match stmt with
-    | Absyn.Dim (ident, expr) -> unimpl "Dim (ident, expr)"
-    | Absyn.Let (memref, expr) -> unimpl "Let (memref, expr)"
+    | Absyn.Dim (ident, expr) -> interp_dim (ident, expr)
+    | Absyn.Let (memref, expr) -> interp_let (memref, expr)
     | Absyn.Goto labsl -> unimpl "Goto labsl"
     | Absyn.If (expr, label) -> unimpl "If (expr, label)"
     | Absyn.Print print_list -> interp_print print_list
