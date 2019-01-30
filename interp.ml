@@ -22,7 +22,7 @@ let interp_goto (label : Absyn.label) =
 
 let interp_if ((expr : Absyn.expr), (label : Absyn.label)) = 
     match (eval_expr expr) with
-        | 0. -> ()
+        | 0. -> None
         | 1. -> interp_goto label
 
 let interp_print (print_list : Absyn.printable list) =
@@ -60,7 +60,10 @@ let rec interpret (program : Absyn.program) = match program with
     | [] -> ()
     | firstline::otherlines -> match firstline with
       | _, _, None -> interpret otherlines
-      | _, _, Some stmt -> (interp_stmt stmt; interpret otherlines)
+      | _, _, Some stmt -> (let next_line = interp_stmt stmt
+                            in match next_line with
+                            | None -> interpret otherlines
+                            | Some program -> interpret program)
 
 let interpret_program program =
     (Tables.init_label_table program; 
