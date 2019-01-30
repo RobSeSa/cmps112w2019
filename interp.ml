@@ -25,6 +25,9 @@ let interp_let ((memref : Absyn.memref), (expr : Absyn.expr)) =
         | Absyn.Variable ident -> Hashtbl.add Tables.variable_table ident (eval_expr expr)
         | Absyn.Arrayref (ident, index) -> Array.set (Hashtbl.find Tables.array_table ident) (int_of_float (eval_expr index)) (eval_expr expr)
 
+let interp_goto (label : Absyn.label) =
+    Hashtbl.find Tables.label_table label
+
 let interp_print (print_list : Absyn.printable list) =
     let print_item item =
         (print_char ' ';
@@ -43,15 +46,14 @@ let interp_input (memref_list : Absyn.memref list) =
             | Absyn.Variable ident -> 
                 Hashtbl.add Tables.variable_table ident number
             | Absyn.Arrayref (ident, expr) -> 
-                Hashtbl.add Tables.variable_table ident (eval_expr expr)
-        with End_of_file -> 
-             (print_string "End_of_file"; print_newline ())
+                Array.set (Hashtbl.find Tables.array_table ident) (int_of_float (eval_expr expr)) number
+        with End_of_file -> Hashtbl.replace Tables.variable_table "eof" 1.
     in List.iter input_number memref_list
 
 let interp_stmt (stmt : Absyn.stmt) = match stmt with
     | Absyn.Dim (ident, expr) -> interp_dim (ident, expr)
     | Absyn.Let (memref, expr) -> interp_let (memref, expr)
-    | Absyn.Goto label -> unimpl "Goto labsl"
+    | Absyn.Goto label -> interp_goto label
     | Absyn.If (expr, label) -> unimpl "If (expr, label)"
     | Absyn.Print print_list -> interp_print print_list
     | Absyn.Input memref_list -> interp_input memref_list
@@ -60,7 +62,10 @@ let rec interpret (program : Absyn.program) = match program with
     | [] -> ()
     | firstline::otherlines -> match firstline with
       | _, _, None -> interpret otherlines
-      | _, _, Some stmt -> (interp_stmt stmt; interpret otherlines)
+      | _, _, Some stmt -> let next_line = interp_stmt stmt in
+                           match next_line with
+                               | None -> interpret otherlines
+                               | Some line -> interpret line
 
 let interpret_program program =
     (Tables.init_label_table program; 
