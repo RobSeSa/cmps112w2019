@@ -38,14 +38,19 @@ type binary_fn_table_t = (string, float -> float -> float) Hashtbl.t
 let binary_fn_table : binary_fn_table_t = Hashtbl.create 16
 let _ = List.map (fun (label, value) ->
                   Hashtbl.add binary_fn_table label value)
-                 ["+", (+.);
-                  "-", (-.);
-                  "*", ( *.);
-                  "/", (/.);
-                  "%", mod_float;
-                  "^", ( ** )]
+                 ["+" , (+.);
+                  "-" , (-.);
+                  "*" , ( *.);
+                  "/" , (/.);
+                  "%" , mod_float;
+                  "^" , ( ** );
+                  "<" , (fun x y -> if x < y then 1. else 0.);
+                  ">" , (fun x y -> if x > y then 1. else 0.);
+                  "<=", (fun x y -> if x <= y then 1. else 0.);
+                  ">=", (fun x y -> if x >= y then 1. else 0.);
+                  "=" , (fun x y -> if x = y then 1. else 0.);
+                  "<>", (fun x y -> if x <> y then 1. else 0.)]
 
-
 type label_table_t = (string, Absyn.program) Hashtbl.t
 let label_table : label_table_t = Hashtbl.create 16
 

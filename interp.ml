@@ -23,10 +23,15 @@ let interp_dim ((ident : Absyn.ident), (expr : Absyn.expr)) =
 let interp_let ((memref : Absyn.memref), (expr : Absyn.expr)) =
     match memref with
         | Absyn.Variable ident -> Hashtbl.add Tables.variable_table ident (eval_expr expr)
-        | Absyn.Arrayref (ident, index) -> Array.set (Hashtbl.find Tables.array_table ident) (int_of_float (eval_expr index)) (eval_expr expr)
+        | Absyn.Arrayref (ident, index) -> Array.set (Hashtbl.find Tables.array_table ident) (int_of_float ((eval_expr index) -. 1.)) (eval_expr expr)
 
 let interp_goto (label : Absyn.label) =
     Hashtbl.find Tables.label_table label
+
+let interp_if (expr, label) = 
+    let boolean = eval_expr expr in match boolean with
+        | 1. -> Some (interp_goto label)
+        | _ -> None
 
 let interp_print (print_list : Absyn.printable list) =
     let print_item item =
@@ -41,20 +46,22 @@ let interp_print (print_list : Absyn.printable list) =
 
 let interp_input (memref_list : Absyn.memref list) =
     let input_number (memref : Absyn.memref) =
-        try let number = Etc.read_number ()
-            in match memref with
-            | Absyn.Variable ident -> 
-                Hashtbl.add Tables.variable_table ident number
-            | Absyn.Arrayref (ident, expr) -> 
-                Array.set (Hashtbl.find Tables.array_table ident) (int_of_float (eval_expr expr)) number
-        with End_of_file -> Hashtbl.replace Tables.variable_table "eof" 1.
+        if Hashtbl.find Tables.variable_table "eof" = 0. then
+            try let number = Etc.read_number ()
+                in match memref with
+                | Absyn.Variable ident -> 
+                    Hashtbl.add Tables.variable_table ident number
+                | Absyn.Arrayref (ident, expr) -> 
+                    Array.set (Hashtbl.find Tables.array_table ident) (int_of_float ((eval_expr expr) -. 1.)) number
+            with End_of_file -> Hashtbl.replace Tables.variable_table "eof" 1.
+        else ()
     in List.iter input_number memref_list
 
 let interp_stmt (stmt : Absyn.stmt) = match stmt with
     | Absyn.Dim (ident, expr) -> (interp_dim (ident, expr); None)
     | Absyn.Let (memref, expr) -> (interp_let (memref, expr); None)
     | Absyn.Goto label -> Some (interp_goto label)
-    | Absyn.If (expr, label) -> unimpl "If (expr, label)"
+    | Absyn.If (expr, label) -> interp_if (expr, label)
     | Absyn.Print print_list -> (interp_print print_list; None)
     | Absyn.Input memref_list -> (interp_input memref_list; None)
 
