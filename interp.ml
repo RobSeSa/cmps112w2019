@@ -10,7 +10,7 @@ let rec eval_expr (expr : Absyn.expr) : float = match expr with
                                   Tables.variable_table ident
         | Absyn.Arrayref (ident, expr) ->
             Array.get (Hashtbl.find Tables.array_table ident) 
-                      (int_of_float (eval_expr expr)))
+                      (int_of_float ((eval_expr expr) -. 1.)))
     | Absyn.Unary (oper, expr) -> 
         (Hashtbl.find Tables.unary_fn_table oper) (eval_expr expr)
     | Absyn.Binary (oper, expr1, expr2) -> 
