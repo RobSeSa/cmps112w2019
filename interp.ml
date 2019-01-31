@@ -51,23 +51,24 @@ let interp_input (memref_list : Absyn.memref list) =
     in List.iter input_number memref_list
 
 let interp_stmt (stmt : Absyn.stmt) = match stmt with
-    | Absyn.Dim (ident, expr) -> interp_dim (ident, expr)
-    | Absyn.Let (memref, expr) -> interp_let (memref, expr)
-    | Absyn.Goto label -> interp_goto label
+    | Absyn.Dim (ident, expr) -> (interp_dim (ident, expr); None)
+    | Absyn.Let (memref, expr) -> (interp_let (memref, expr); None)
+    | Absyn.Goto label -> Some (interp_goto label)
     | Absyn.If (expr, label) -> unimpl "If (expr, label)"
-    | Absyn.Print print_list -> interp_print print_list
-    | Absyn.Input memref_list -> interp_input memref_list
+    | Absyn.Print print_list -> (interp_print print_list; None)
+    | Absyn.Input memref_list -> (interp_input memref_list; None)
 
-let rec interpret (program : Absyn.program) = match program with
-    | [] -> ()
-    | firstline::otherlines -> match firstline with
-      | _, _, None -> interpret otherlines
+let rec interpret (program : Absyn.program option) = match program with
+    | None -> ()
+    | Some [] -> ()
+    | Some (firstline::otherlines) -> match firstline with
+      | _, _, None -> interpret (Some otherlines)
       | _, _, Some stmt -> let next_line = interp_stmt stmt in
                            match next_line with
-                               | None -> interpret otherlines
-                               | Some line -> interpret line
+                               | None -> interpret (Some otherlines)
+                               | Some line -> interpret (Some line)
 
 let interpret_program program =
     (Tables.init_label_table program; 
-     interpret program)
+     interpret (Some program))
 
