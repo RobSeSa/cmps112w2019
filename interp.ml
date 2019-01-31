@@ -18,12 +18,16 @@ let rec eval_expr (expr : Absyn.expr) : float = match expr with
         (eval_expr expr1) (eval_expr expr2)
 
 let interp_dim ((ident : Absyn.ident), (expr : Absyn.expr)) =
-    Hashtbl.add Tables.array_table ident (Array.make (int_of_float (eval_expr expr)) 0.)
+    Hashtbl.add Tables.array_table ident 
+        (Array.make (int_of_float (eval_expr expr)) 0.)
 
 let interp_let ((memref : Absyn.memref), (expr : Absyn.expr)) =
     match memref with
-        | Absyn.Variable ident -> Hashtbl.add Tables.variable_table ident (eval_expr expr)
-        | Absyn.Arrayref (ident, index) -> Array.set (Hashtbl.find Tables.array_table ident) (int_of_float ((eval_expr index) -. 1.)) (eval_expr expr)
+        | Absyn.Variable ident -> Hashtbl.add Tables.variable_table 
+                                              ident (eval_expr expr)
+        | Absyn.Arrayref (ident, index) -> Array.set 
+            (Hashtbl.find Tables.array_table ident) 
+            (int_of_float ((eval_expr index) -. 1.)) (eval_expr expr)
 
 let interp_goto (label : Absyn.label) =
     Hashtbl.find Tables.label_table label
@@ -52,8 +56,10 @@ let interp_input (memref_list : Absyn.memref list) =
                 | Absyn.Variable ident -> 
                     Hashtbl.add Tables.variable_table ident number
                 | Absyn.Arrayref (ident, expr) -> 
-                    Array.set (Hashtbl.find Tables.array_table ident) (int_of_float ((eval_expr expr) -. 1.)) number
-            with End_of_file -> Hashtbl.replace Tables.variable_table "eof" 1.
+                    Array.set (Hashtbl.find Tables.array_table ident) 
+                        (int_of_float ((eval_expr expr) -. 1.)) number
+            with End_of_file -> Hashtbl.replace 
+                Tables.variable_table "eof" 1.
         else ()
     in List.iter input_number memref_list
 
