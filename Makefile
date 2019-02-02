@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.14 2019-01-24 14:04:36-08 - - $
+# $Id: Makefile,v 1.8 2019-01-25 16:48:22-08 - - $
 
 #
 # General useful macros
@@ -12,19 +12,19 @@ NEEDINCL   = ${filter ${NOINCLUDE}, ${MAKECMDGOALS}}
 GMAKE      = ${MAKE} --no-print-directory
 
 #
-# File list macros
+# File macros
 #
 
 EXECBIN	   = sbinterp
-OBJCMO	   = etc.cmo parser.cmo scanner.cmo \
-             tables.cmo interp.cmo main.cmo
+OBJCMO	   = etc.cmo parser.cmo scanner.cmo tables.cmo \
+             dumper.cmo interp.cmo main.cmo
 OBJCMI	   = ${OBJCMO:.cmo=.cmi} absyn.cmi
 OBJBIN	   = ${OBJCMO:.cmo=.o}
 MLSOURCE   = absyn.mli etc.mli etc.ml tables.mli tables.ml \
-             interp.mli interp.ml main.ml
-GENSOURCE  = tables.mli parser.mli parser.ml scanner.ml
+             dumper.mli dumper.ml interp.mli interp.ml main.ml
+GENSOURCE  = dumper.mli tables.mli parser.mli parser.ml scanner.ml
 GENFILES   = ${GENSOURCE} parser.output ${DEPSFILE}
-OTHERFILES = ${MKFILE} ${DEPSFILE} using
+OTHERFILES = ${MKFILE} ${DEPSFILE} using .ocamlinit
 ALLSOURCES = ${MLSOURCE} parser.mly scanner.mll ${OTHERFILES}
 LISTING    = Listing.ps
 
@@ -50,35 +50,31 @@ ${EXECBIN} : ${OBJCMO}
 	ocamlyacc -v $<
 
 
-GEN_TABLES_MLI = ocamlc -i tables.ml
+MAKEMLI    = (echo "(* Generated: $$(date) *)"; ocamlc -i $<) >$@
+
 tables.mli : tables.ml absyn.cmi
-	( echo "(* Generated file: DO NOT EDIT *)" \
-	; echo "(* ${GEN_TABLES_MLI} *)" \
-	; echo "(* Generated $$(date) *)" \
-	; ${GEN_TABLES_MLI} | sed 's/^type/\n&/' \
-	) >tables.mli
+	${call MAKEMLI}
+
+dumper.mli : dumper.ml absyn.cmi
+	${call MAKEMLI}
 
 #
 # Misc targets
 #
 
 clean :
-	- rm -f ${OBJCMI} ${OBJCMO} ${OBJBIN}
+	- rm -f ${OBJCMI} ${OBJCMO} ${OBJBIN} ${GENSOURCE}
 
 spotless : clean
 	- rm -f ${EXECBIN} ${GENFILES} ${LISTING} ${LISTING:.ps=.pdf} 
 
 ci : ${ALLSOURCES}
+	- checksource ${ALLSOURCES}
 	cid + ${ALLSOURCES}
 
-GEN_OCAMLDEP = ocamldep ${MLSOURCE} ${GENSOURCE}
-GEN_FORMAT = perl -pe 's/^(.{1,72})\s+(.*)/$$1 \\\n\# $$2/'
 deps : ${MLSOURCE} ${GENSOURCE}
-	( echo "# Generated file: DO NOT EDIT" \
-	; echo "# ${GEN_OCAMLDEP}" | ${GEN_FORMAT} \
-	; echo "# Generated $$(date)" \
-	; ${GEN_OCAMLDEP} \
-	) >${DEPSFILE}
+	@ echo "# Generated: $$(date)" >${DEPSFILE}
+	ocamldep ${MLSOURCE} ${GENSOURCE} >>${DEPSFILE}
 
 ${DEPSFILE} : tables.mli
 	@touch ${DEPSFILE}

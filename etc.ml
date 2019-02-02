@@ -1,3 +1,7 @@
+(* Robert Sato (rssato)
+ * Huanlei Wu (hwu43)
+*)
+
 (* $Id: etc.ml,v 1.1 2019-01-18 11:49:38-08 - - $ *)
 
 let execname = Filename.basename Sys.argv.(0)
