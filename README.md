@@ -1,2 +1,0 @@
-# cmps112w2019
-CMPS 112 Winter 2019
