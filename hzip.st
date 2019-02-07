@@ -1,7 +1,6 @@
 #!/afs/cats.ucsc.edu/courses/cmps112-wm/usr/smalltalk/bin/gst -f
-"$Id: bitstream.st,v 1.1 2019-02-01 14:36:25-08 - - $"
-execname := '$RCSfile: bitstream.st,v $' =~ '.*: (.*),v.*' at: 1.
 
+"prints the correct symbol for the ASCII characters"
 Character extend [
    isGraph [
       ^ (Character space < self) & (self <= $~)
@@ -13,6 +12,73 @@ Character extend [
 ]
 
 nl := Character nl.
+
+"leaf class"
+Object subclass: Leaf [
+   |char count|
+   char [ ^ char ]
+   count [^ count ]
+   
+   "do not implement is not given a character or an integer"
+   Leaf class >> new [
+      self shouldNotImplement
+   ]
+   
+   "constructor"
+   Leaf class >> new: aChar count: aCount [
+      |result|
+      result := super new.
+      result setChar: aChar andCount: aCount.
+      ^result
+   ]
+
+   <= other [
+      ^ (count < other count) | 
+      ((count = other count) & (char <= other char))
+   ]
+
+   printBase: aStream [
+      ^ aStream << self class << '(' << char << ',' << count
+   ]
+
+   printOn: aStream [
+      (self printBase: aStream) << ')'.
+   ]
+
+   inorder: visitor prefix: string [
+      visitor value: char value: string.
+   ]
+]
+
+"tree subclass; leaf is a subclass of tree"
+Leaf subclass: Tree [
+   |left right|
+   
+   Tree class >> new: aChar count: aCount [
+      self shouldNotImplement
+   ]
+   
+   Tree class >> new: aChar count: aCount left: aLeft right: aRight [
+      |result|
+      result := super new: aChar count: aCount.
+      result setLeft: aLeft andRight: aRight.
+      ^ result
+   ]
+   
+   setLeft: aLeft andRight: aRight [
+      left := aLeft.
+      right := aRight.
+   ]
+
+   printOn: aStream [
+      (slef printBase: aStream) << ',' << left << ',' << right << ')'.
+   ]
+
+   inorder: visitor prefix: string [
+      left inorder: visitor prefix: string, '0'.
+      right inorder: visitor prefix: string, '1'.
+   ]
+]
 
 "Frequency Array"
 frequency := Array new: 257.
@@ -31,14 +97,19 @@ stdinBits := FileStream open: (Smalltalk arguments at: 1) mode: FileStream read.
    stdout << character.
 ].
 
+stdinBits close.
+
+"add an EOF when the file closes to indicate end of file"
+frequency at: 257 put: 1.
+
 (1 to: 257) do: [:i|
-   stdout nextPutByte: i. 
+   i = 257 ifTrue: [stdout << 'EOF']
+           ifFalse: [stdout << i asCharacter visible.].
+   "stdout nextPutByte: i." 
    stdout << ': '.
    stdout << (frequency at: i).
    stdout << nl.
 ].
-
-stdinBits close.
 
 "TEST: echo hello world | ./bitstream.st 2>&1"
 
