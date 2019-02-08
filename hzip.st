@@ -32,6 +32,11 @@ Object subclass: Leaf [
       ^result
    ]
 
+   setChar: aChar andCount: aCount [
+      char := aChar.
+      count := aCount.
+   ]
+
    <= other [
       ^ (count < other count) | 
       ((count = other count) & (char <= other char))
@@ -71,7 +76,7 @@ Leaf subclass: Tree [
    ]
 
    printOn: aStream [
-      (slef printBase: aStream) << ',' << left << ',' << right << ')'.
+      (self printBase: aStream) << ',' << left << ',' << right << ')'.
    ]
 
    inorder: visitor prefix: string [
@@ -90,6 +95,7 @@ frequency := Array new: 257.
 
 stdinBits := FileStream open: (Smalltalk arguments at: 1) mode: FileStream read.
 
+"creating histogram from input file"
 [stdinBits atEnd] whileFalse: [
    character := stdinBits next.
    charNum := character asciiValue.
@@ -102,14 +108,27 @@ stdinBits close.
 "add an EOF when the file closes to indicate end of file"
 frequency at: 257 put: 1.
 
-(1 to: 257) do: [:i|
+"(1 to: 257) do: [:i|
    i = 257 ifTrue: [stdout << 'EOF']
            ifFalse: [stdout << i asCharacter visible.].
-   "stdout nextPutByte: i." 
+   stdout nextPutByte: i.
    stdout << ': '.
    stdout << (frequency at: i).
    stdout << nl.
+]."
+
+"creating the priority queue"
+sortFreq := SortedCollection new.
+(1 to: 257) do: [:i|
+   |node freqCount|
+   freqCount := frequency at: i.
+   (freqCount > 0) ifTrue: [
+      node := Leaf new: (i asCharacter visible) count: freqCount.
+      sortFreq add: node.
+   ]
 ].
+
+sortFreq inspect.
 
 "TEST: echo hello world | ./bitstream.st 2>&1"
 
