@@ -38,7 +38,7 @@ Object subclass: Leaf [
    ]
 
    <= other [
-      ^ (count < other count) | 
+      ^ (count < other count) |
       ((count = other count) & (char <= other char))
    ]
 
@@ -130,5 +130,14 @@ sortFreq := SortedCollection new.
 
 sortFreq inspect.
 
+"creating one tree from priority queue"
+[sortFreq size > 2] whileTrue: [
+   |lLeaf rLeaf tree totalCount|
+   lLeaf := sortFreq removeFirst.
+   rLeaf := sortFreq removeFirst.
+   totalCount := (lLeaf count) + (rLeaf count).
+   tree := Tree new: $a count: totalCount left: lLeaf right: rLeaf.
+   sortFreq add: tree.
+].
 "TEST: echo hello world | ./bitstream.st 2>&1"
 
