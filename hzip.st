@@ -6,8 +6,8 @@ Character extend [
       ^ (Character space < self) & (self <= $~)
    ]
    visible [
-      self isGraph ifTrue: [^ '$', self asString]
-                   ifFalse: [^ self asInteger printStringRadix: 16]
+      self isGraph ifTrue: [^ self asString]
+                   ifFalse: [^ self asInteger printPaddedWith: 0 to: 1 base: 16]
    ]
 ]
 
@@ -43,7 +43,7 @@ Object subclass: Leaf [
    ]
 
    printBase: aStream [
-      ^ aStream << self class << '(' << char << ',' << count
+      ^ aStream << self class << '(' << (char visible) << ',' << count
    ]
 
    printOn: aStream [
@@ -123,7 +123,7 @@ sortFreq := SortedCollection new.
    |node freqCount|
    freqCount := frequency at: i.
    (freqCount > 0) ifTrue: [
-      node := Leaf new: (i asCharacter visible) count: freqCount.
+      node := Leaf new: (i asCharacter) count: freqCount.
       sortFreq add: node.
    ]
 ].
@@ -139,5 +139,8 @@ sortFreq inspect.
    tree := Tree new: $a count: totalCount left: lLeaf right: rLeaf.
    sortFreq add: tree.
 ].
+
+
+sortFreq inspect.
 "TEST: echo hello world | ./bitstream.st 2>&1"
 
