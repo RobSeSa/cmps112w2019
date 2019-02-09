@@ -53,6 +53,10 @@ Object subclass: Leaf [
    inorder: visitor prefix: string [
       visitor value: char value: string.
    ]
+
+   postorder: visitor [
+      visitor value: char.
+   ]
 ]
 
 "tree subclass; leaf is a subclass of tree"
@@ -83,7 +87,33 @@ Leaf subclass: Tree [
       left inorder: visitor prefix: string, '0'.
       right inorder: visitor prefix: string, '1'.
    ]
+
+   postorder: visitor [
+      left postorder: visitor.
+      right postorder: visitor.
+   ]
 ]
+
+"too many or too few arguments"
+((Smalltalk arguments size) < 2) | ((Smalltalk arguments size) > 3) ifTrue: [
+   stdout << 'Error: incorrect argument number. ' << nl << 'Exiting...' << nl.
+   ObjectMemory quit: 1.
+].
+
+"hzip. -dtcu inputFile outputFile"
+((Smalltalk arguments size) = 3) ifTrue: [
+   stdout << '3 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+   fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
+].
+
+"hzip. -dtcu inputFile"
+((Smalltalk arguments size) = 2) ifTrue: [
+   stdout << '2 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+   fileOut := stdout.
+].
+
 
 "Frequency Array"
 frequency := Array new: 257.
@@ -93,17 +123,18 @@ frequency := Array new: 257.
    frequency at: i put: 0.
 ].
 
-stdinBits := FileStream open: (Smalltalk arguments at: 1) mode: FileStream read.
+
+
 
 "creating histogram from input file"
-[stdinBits atEnd] whileFalse: [
-   character := stdinBits next.
+[fileIn atEnd] whileFalse: [
+   character := fileIn next.
    charNum := character asciiValue.
    frequency at: charNum put: (frequency at: charNum) + 1.
-   stdout << character.
+   "stdout << character."
 ].
 
-stdinBits close.
+fileIn close.
 
 "add an EOF when the file closes to indicate end of file"
 frequency at: 257 put: 1.
@@ -128,19 +159,41 @@ sortFreq := SortedCollection new.
    ]
 ].
 
-sortFreq inspect.
+"sortFreq inspect."
 
 "creating one tree from priority queue"
-[sortFreq size > 2] whileTrue: [
+[sortFreq size > 1] whileTrue: [
    |lLeaf rLeaf tree totalCount|
    lLeaf := sortFreq removeFirst.
    rLeaf := sortFreq removeFirst.
    totalCount := (lLeaf count) + (rLeaf count).
-   tree := Tree new: $a count: totalCount left: lLeaf right: rLeaf.
+   tree := Tree new: (lLeaf char) count: totalCount left: lLeaf right: rLeaf.
    sortFreq add: tree.
 ].
 
 
-sortFreq inspect.
-"TEST: echo hello world | ./bitstream.st 2>&1"
+"sortFreq inspect."
+stdout << ';;;;;;;;;;;' << nl.
+bitTree := Array new: 257.
 
+stdout << nl << 'Before vising sortFreq Tree' << nl.
+(sortFreq last) inorder: [:char :string |
+   stdout << '[' << char << ']=' << string << nl.
+   bitTree at: (char asInteger) put: string.
+] prefix: ''.
+
+(sortFreq last) inspect.
+bitTree inspect.
+
+"(sortFreq last) postorder: [:char |
+   |pathSize path|
+   path := bitTree at: (char asInteger).
+   pathSize := path size.
+   (1 to: pathSize) do: [:i|
+      fileOut bitAt: idx put: (path bitAt: i).
+   ]
+].
+"
+((Smalltalk arguments size) = 3) ifTrue: [
+   fileOut close.
+].
