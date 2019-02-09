@@ -1,5 +1,26 @@
 #!/afs/cats.ucsc.edu/courses/cmps112-wm/usr/smalltalk/bin/gst -f
 
+nl := Character nl.
+
+"too many or too few arguments"
+((Smalltalk arguments size) < 2) | ((Smalltalk arguments size) > 3) ifTrue: [
+   stdout << 'Error: incorrect argument number. ' << nl << 'Exiting...' << nl.
+   ObjectMemory quit: 1.
+].
+
+"hzip. -dtcu inputFile outputFile"
+((Smalltalk arguments size) = 3) ifTrue: [
+   stdout << '3 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+   fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
+].
+
+"hzip. -dtcu inputFile"
+((Smalltalk arguments size) = 2) ifTrue: [
+   stdout << '2 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+   fileOut := stdout.
+].
 "prints the correct symbol for the ASCII characters"
 Character extend [
    isGraph [
@@ -11,8 +32,9 @@ Character extend [
    ]
 ]
 
-nl := Character nl.
-
+encodedTreeStream := FileStream open: 'encodedTreeStream.txt' mode: FileStream write. 
+"encodedTreeStream := 'encodedTreeStream.txt' asFilename writeStream.
+"
 "leaf class"
 Object subclass: Leaf [
    |char count|
@@ -50,13 +72,14 @@ Object subclass: Leaf [
       (self printBase: aStream) << ')'.
    ]
 
-   inorder: visitor prefix: string [
+   inorder: visitor prefix: string stream: aStream[
       visitor value: char value: string.
    ]
 
-   postorder: visitor [
-      visitor value: char.
+   postorder: visitor prefix: string stream: aStream[
+      visitor value: char value: '0'.
    ]
+   
 ]
 
 "tree subclass; leaf is a subclass of tree"
@@ -83,37 +106,20 @@ Leaf subclass: Tree [
       (self printBase: aStream) << ',' << left << ',' << right << ')'.
    ]
 
-   inorder: visitor prefix: string [
-      left inorder: visitor prefix: string, '0'.
-      right inorder: visitor prefix: string, '1'.
+   inorder: visitor prefix: string stream: aStream[
+      left inorder: visitor prefix: (string, '0') stream: aStream.
+      right inorder: visitor prefix: (string, '1') stream: aStream.
+      "stdout << 'Tree->inorder: Left = ' << left << ' Right = ' << right << 'printing 1' << Character nl."
+      "stdout << '1'."
+      aStream << '(pop)'.
    ]
 
-   postorder: visitor [
-      left postorder: visitor.
-      right postorder: visitor.
+   postorder: visitor prefix: string stream: aStream [
+      left postorder: visitor prefix: string stream: aStream.
+      right postorder: visitor prefix: string stream: aStream.
+      aStream << '1'.
    ]
 ]
-
-"too many or too few arguments"
-((Smalltalk arguments size) < 2) | ((Smalltalk arguments size) > 3) ifTrue: [
-   stdout << 'Error: incorrect argument number. ' << nl << 'Exiting...' << nl.
-   ObjectMemory quit: 1.
-].
-
-"hzip. -dtcu inputFile outputFile"
-((Smalltalk arguments size) = 3) ifTrue: [
-   stdout << '3 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
-   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
-   fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
-].
-
-"hzip. -dtcu inputFile"
-((Smalltalk arguments size) = 2) ifTrue: [
-   stdout << '2 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
-   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
-   fileOut := stdout.
-].
-
 
 "Frequency Array"
 frequency := Array new: 257.
@@ -122,9 +128,6 @@ frequency := Array new: 257.
 (1 to: 257) do: [:i|
    frequency at: i put: 0.
 ].
-
-
-
 
 "creating histogram from input file"
 [fileIn atEnd] whileFalse: [
@@ -139,15 +142,6 @@ fileIn close.
 "add an EOF when the file closes to indicate end of file"
 frequency at: 257 put: 1.
 
-"(1 to: 257) do: [:i|
-   i = 257 ifTrue: [stdout << 'EOF']
-           ifFalse: [stdout << i asCharacter visible.].
-   stdout nextPutByte: i.
-   stdout << ': '.
-   stdout << (frequency at: i).
-   stdout << nl.
-]."
-
 "creating the priority queue"
 sortFreq := SortedCollection new.
 (1 to: 257) do: [:i|
@@ -158,8 +152,6 @@ sortFreq := SortedCollection new.
       sortFreq add: node.
    ]
 ].
-
-"sortFreq inspect."
 
 "creating one tree from priority queue"
 [sortFreq size > 1] whileTrue: [
@@ -172,28 +164,30 @@ sortFreq := SortedCollection new.
 ].
 
 
-"sortFreq inspect."
-stdout << ';;;;;;;;;;;' << nl.
+fileOut << ';;;;;;;;;;;' << nl.
+fileOut << nl << 'creating bitTree array with sortFreq inorder' << 
+nl << ';;;;;;;;;;' << nl.
+"creating the bitTree that holds binary encoding of each char as a string"
 bitTree := Array new: 257.
-
-stdout << nl << 'Before vising sortFreq Tree' << nl.
 (sortFreq last) inorder: [:char :string |
-   stdout << '[' << char << ']=' << string << nl.
+   fileOut << nl <<'[' << char << ']=' << string.
    bitTree at: (char asInteger) put: string.
-] prefix: ''.
+] prefix: '' stream: fileOut.
 
-(sortFreq last) inspect.
-bitTree inspect.
 
-"(sortFreq last) postorder: [:char |
-   |pathSize path|
-   path := bitTree at: (char asInteger).
-   pathSize := path size.
-   (1 to: pathSize) do: [:i|
-      fileOut bitAt: idx put: (path bitAt: i).
-   ]
-].
-"
+fileOut << nl << nl << 'sortFreq postorder:prefix:stream:' << 
+nl << ';;;;;;;;;;' << nl.
+
+"output 0 leaf and 1 for nodes to encodedTreeStream.txt"
+(sortFreq last) postorder: [:char :string |
+   encodedTreeStream << string << char.
+] prefix: '' stream: encodedTreeStream.
+
+"handle the temp encodedTreeStream.txt file"
+encodedTreeStream close.
+File remove: 'encodedTreeStream.txt'.
 ((Smalltalk arguments size) = 3) ifTrue: [
    fileOut close.
 ].
+
+stdout << nl << 'Done.' << nl.
