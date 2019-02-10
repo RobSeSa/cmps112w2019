@@ -121,6 +121,55 @@ Leaf subclass: Tree [
    ]
 ]
 
+"handles writing a single byte to output file"
+
+Object subclass: ByteWriter [
+   |byteWrite byteIdx aStream|
+
+   ByteWriter class >> new: outFile [
+      | result |
+      result := super new.
+      result init: outFile.
+      ^ result
+   ]
+
+   init: outFile [
+      byteWrite := 0.
+      byteIdx := 8.
+      aStream := outFile.
+   ]
+
+   writeBit: aBit [
+      byteWrite bitAt: byteIdx put: aBit.
+      byteIdx := byteIdx - 1.
+
+      byteIdx < 1 ifTrue: [
+         byteIdx := 8.
+         aStream << byteWrite.
+      ].
+   ]
+
+   writeChar: aChar [
+      (1 to: 8) do: [:i|
+         "stdout << aChar << Character nl."
+         byteWrite bitAt: byteIdx put: (aChar bitAt: (9 - i)).
+         byteIdx := byteIdx - 1.
+
+         byteIdx < 1 ifTrue: [
+            byteIdx := 8.
+            aStream << byteWrite.
+         ].
+      ].
+   ]
+
+   padZero [
+      (1 to: byteIdx) do: [:i|
+         byteWrite bitAt: (9 - i) put: 0.
+      ].
+      aStream << byteWrite.
+   ]
+]
+
 "Frequency Array"
 frequency := Array new: 257.
 
@@ -185,6 +234,14 @@ nl << ';;;;;;;;;;' << nl.
 
 "handle the temp encodedTreeStream.txt file"
 encodedTreeStream close.
+
+"open encodedTreeStream.txt to convert byte to bits"
+treeFile := FileStream open: 'encodedTreeStream.txt' mode: FileStream read.
+writeByte := ByteWriter new: fileOut.
+
+fileOut << nl << 'byte is being written' << nl.
+writeByte writeChar: 3.
+
 File remove: 'encodedTreeStream.txt'.
 ((Smalltalk arguments size) = 3) ifTrue: [
    fileOut close.
