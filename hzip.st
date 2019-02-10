@@ -28,7 +28,7 @@ Character extend [
    ]
    visible [
       self isGraph ifTrue: [^ self asString]
-                   ifFalse: [^ self asInteger printPaddedWith: 0 to: 1 base: 16]
+                   ifFalse: [^ self asInteger]
    ]
 ]
 
@@ -140,7 +140,7 @@ Object subclass: ByteWriter [
    ]
 
    writeBit: aBit [
-      byteWrite bitAt: byteIdx put: aBit.
+      byteWrite := byteWrite bitAt: byteIdx put: aBit.
       byteIdx := byteIdx - 1.
 
       byteIdx < 1 ifTrue: [
@@ -150,9 +150,11 @@ Object subclass: ByteWriter [
    ]
 
    writeChar: aChar [
+      "aStream << 'input to writeChar = ' << aChar << Character nl."
       (1 to: 8) do: [:i|
-         "stdout << aChar << Character nl."
-         byteWrite bitAt: byteIdx put: (aChar bitAt: (9 - i)).
+         byteWrite := byteWrite bitAt: byteIdx put: (aChar bitAt: (9 - i)).
+         "aStream << 'putting: ' << (aChar bitAt: (9 - i)) << ' at bit ' << byteIdx 
+            << Character nl."
          byteIdx := byteIdx - 1.
 
          byteIdx < 1 ifTrue: [
@@ -163,10 +165,13 @@ Object subclass: ByteWriter [
    ]
 
    padZero [
-      (1 to: byteIdx) do: [:i|
-         byteWrite bitAt: (9 - i) put: 0.
+      "byteIdx = 8 means there are not bits in byteWrite to be written"
+      (byteIdx < 8) ifTrue: [
+         (1 to: byteIdx) do: [:i|
+            byteWrite := byteWrite bitAt: (9 - i) put: 0.
+         ].
+         aStream << byteWrite.
       ].
-      aStream << byteWrite.
    ]
 ]
 
@@ -239,8 +244,41 @@ encodedTreeStream close.
 treeFile := FileStream open: 'encodedTreeStream.txt' mode: FileStream read.
 writeByte := ByteWriter new: fileOut.
 
-fileOut << nl << 'byte is being written' << nl.
-writeByte writeChar: 3.
+
+fileOut << nl << ';;;;; using ByteWriter on treeFile ;;;;;' << nl.
+isLeaf := 0.
+[treeFile atEnd] whileFalse: [
+   character := treeFile next.
+   charNum := character asciiValue.
+   fileOut << nl << 'read character = ' << character << nl.
+   "if character is a leaf"
+   (isLeaf = 1) ifTrue: [
+      writeByte writeChar: charNum.
+      isLeaf := 0.
+   ].
+   "if character = '0' and it is not a leaf"
+   ((charNum = 48) & (isLeaf = 0)) ifTrue: [
+      writeByte writeBit: 0.
+      isLeaf := 1.
+   ].
+   "if character = '1' and it is not a leaf"
+   ((charNum = 49) & (isLeaf = 0)) ifTrue: [
+      writeByte writeBit: 1.
+   ].
+].
+writeByte padZero.
+
+treeFile close.
+
+"fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+[fileIn atEnd] whileFalse: [
+   character := fileIn next.
+   charNum := character asciiValue.
+   writeByte writeChar: charNum.
+].
+
+fileIn close.
+"
 
 File remove: 'encodedTreeStream.txt'.
 ((Smalltalk arguments size) = 3) ifTrue: [
