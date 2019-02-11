@@ -2,25 +2,6 @@
 
 nl := Character nl.
 
-"too many or too few arguments"
-((Smalltalk arguments size) < 2) | ((Smalltalk arguments size) > 3) ifTrue: [
-   stdout << 'Error: incorrect argument number. ' << nl << 'Exiting...' << nl.
-   ObjectMemory quit: 1.
-].
-
-"hzip. -dtcu inputFile outputFile"
-((Smalltalk arguments size) = 3) ifTrue: [
-   stdout << '3 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
-   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
-   fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
-].
-
-"hzip. -dtcu inputFile"
-((Smalltalk arguments size) = 2) ifTrue: [
-   stdout << '2 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
-   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
-   fileOut := stdout.
-].
 "prints the correct symbol for the ASCII characters"
 Character extend [
    isGraph [
@@ -32,9 +13,6 @@ Character extend [
    ]
 ]
 
-encodedTreeStream := FileStream open: 'encodedTreeStream.txt' mode: FileStream write. 
-"encodedTreeStream := 'encodedTreeStream.txt' asFilename writeStream.
-"
 "leaf class"
 Object subclass: Leaf [
    |char count|
@@ -76,13 +54,14 @@ Object subclass: Leaf [
       visitor value: char value: string.
    ]
 
-   postorder: visitor prefix: string stream: aStream[
-      visitor value: char value: '0'.
+   postorder: aStream[
+      aStream writeBit: 0.
+      aStream writeChar: (char asInteger).
    ]
    
 ]
 
-"tree subclass; leaf is a subclass of tree"
+"Tree class; Tree is a subclass of Leaf"
 Leaf subclass: Tree [
    |left right|
    
@@ -114,15 +93,14 @@ Leaf subclass: Tree [
       aStream << '(pop)'.
    ]
 
-   postorder: visitor prefix: string stream: aStream [
-      left postorder: visitor prefix: string stream: aStream.
-      right postorder: visitor prefix: string stream: aStream.
-      aStream << '1'.
+   postorder: aStream [
+      left postorder: aStream.
+      right postorder: aStream.
+      aStream writeBit: 1.
    ]
 ]
 
 "handles writing a single byte to output file"
-
 Object subclass: ByteWriter [
    |byteWrite byteIdx aStream|
 
@@ -145,7 +123,7 @@ Object subclass: ByteWriter [
 
       byteIdx < 1 ifTrue: [
          byteIdx := 8.
-         aStream << byteWrite.
+         aStream nextPutByte: byteWrite.
       ].
    ]
 
@@ -159,7 +137,7 @@ Object subclass: ByteWriter [
 
          byteIdx < 1 ifTrue: [
             byteIdx := 8.
-            aStream << byteWrite.
+            aStream nextPutByte: byteWrite.
          ].
       ].
    ]
@@ -170,10 +148,33 @@ Object subclass: ByteWriter [
          (1 to: byteIdx) do: [:i|
             byteWrite := byteWrite bitAt: (9 - i) put: 0.
          ].
-         aStream << byteWrite.
+         aStream nextPutByte: byteWrite.
       ].
    ]
 ]
+
+"too many or too few arguments"
+((Smalltalk arguments size) < 2) | ((Smalltalk arguments size) > 3) ifTrue: [
+   stdout << 'Error: incorrect argument number. ' << nl << 'Exiting...' << nl.
+   ObjectMemory quit: 1.
+].
+
+"hzip. -dtcu inputFile outputFile"
+((Smalltalk arguments size) = 3) ifTrue: [
+   stdout << '3 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+   fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
+].
+
+"hzip. -dtcu inputFile"
+((Smalltalk arguments size) = 2) ifTrue: [
+   stdout << '2 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+   fileOut := stdout.
+].
+
+"encodedTreeStream := FileStream open: 'encodedTreeStream.txt' mode: FileStream write."
+"encodedTreeStream := 'encodedTreeStream.txt' asFilename writeStream."
 
 "Frequency Array"
 frequency := Array new: 257.
@@ -217,58 +218,60 @@ sortFreq := SortedCollection new.
    sortFreq add: tree.
 ].
 
-
-fileOut << ';;;;;;;;;;;' << nl.
+"fileOut << ';;;;;;;;;;;' << nl.
 fileOut << nl << 'creating bitTree array with sortFreq inorder' << 
-nl << ';;;;;;;;;;' << nl.
+nl << ';;;;;;;;;;' << nl."
+
 "creating the bitTree that holds binary encoding of each char as a string"
 bitTree := Array new: 257.
-(sortFreq last) inorder: [:char :string |
-   fileOut << nl <<'[' << char << ']=' << string.
+huffTree := sortFreq removeFirst.
+huffTree inorder: [:char :string |
+   stdout << nl <<'[' << char << ']=' << string.
    bitTree at: (char asInteger) put: string.
-] prefix: '' stream: fileOut.
+] prefix: '' stream: stdout.
 
-
-fileOut << nl << nl << 'sortFreq postorder:prefix:stream:' << 
-nl << ';;;;;;;;;;' << nl.
+"fileOut << nl << nl << 'sortFreq postorder:prefix:stream:' << 
+nl << ';;;;;;;;;;' << nl."
 
 "output 0 leaf and 1 for nodes to encodedTreeStream.txt"
-(sortFreq last) postorder: [:char :string |
+"(sortFreq last) postorder: [:char :string |
    encodedTreeStream << string << char.
-] prefix: '' stream: encodedTreeStream.
+] prefix: '' stream: encodedTreeStream."
 
 "handle the temp encodedTreeStream.txt file"
-encodedTreeStream close.
+"encodedTreeStream close."
 
 "open encodedTreeStream.txt to convert byte to bits"
-treeFile := FileStream open: 'encodedTreeStream.txt' mode: FileStream read.
+"treeFile := FileStream open: 'encodedTreeStream.txt' mode: FileStream read."
 writeByte := ByteWriter new: fileOut.
 
+huffTree postorder: writeByte.
+writeByte padZero.
 
-fileOut << nl << ';;;;; using ByteWriter on treeFile ;;;;;' << nl.
+"fileOut << nl << ';;;;; using ByteWriter on treeFile ;;;;;' << nl.
 isLeaf := 0.
 [treeFile atEnd] whileFalse: [
    character := treeFile next.
    charNum := character asciiValue.
    fileOut << nl << 'read character = ' << character << nl.
-   "if character is a leaf"
+   if character is a leaf
    (isLeaf = 1) ifTrue: [
       writeByte writeChar: charNum.
       isLeaf := 0.
    ].
-   "if character = '0' and it is not a leaf"
+   if character = '0' and it is not a leaf
    ((charNum = 48) & (isLeaf = 0)) ifTrue: [
       writeByte writeBit: 0.
       isLeaf := 1.
    ].
-   "if character = '1' and it is not a leaf"
+   if character = '1' and it is not a leaf
    ((charNum = 49) & (isLeaf = 0)) ifTrue: [
       writeByte writeBit: 1.
    ].
 ].
-writeByte padZero.
+writeByte padZero."
 
-treeFile close.
+"treeFile close."
 
 "fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
 [fileIn atEnd] whileFalse: [
@@ -280,7 +283,7 @@ treeFile close.
 fileIn close.
 "
 
-File remove: 'encodedTreeStream.txt'.
+"File remove: 'encodedTreeStream.txt'."
 ((Smalltalk arguments size) = 3) ifTrue: [
    fileOut close.
 ].
