@@ -151,6 +151,10 @@ Object subclass: ByteWriter [
          aStream nextPutByte: byteWrite.
       ].
    ]
+
+   endTree [
+      aStream nextPutByte: 1.
+   ]
 ]
 
 "too many or too few arguments"
@@ -246,6 +250,7 @@ nl << ';;;;;;;;;;' << nl."
 writeByte := ByteWriter new: fileOut.
 
 huffTree postorder: writeByte.
+writeByte endTree.
 writeByte padZero.
 
 "fileOut << nl << ';;;;; using ByteWriter on treeFile ;;;;;' << nl.
