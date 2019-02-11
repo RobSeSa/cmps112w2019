@@ -249,8 +249,23 @@ nl << ';;;;;;;;;;' << nl."
 "treeFile := FileStream open: 'encodedTreeStream.txt' mode: FileStream read."
 writeByte := ByteWriter new: fileOut.
 
+"encoding path to characters in huffTree"
 huffTree postorder: writeByte.
 writeByte endTree.
+
+"encoding fileIn contents"
+fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+[fileIn atEnd] whileFalse: [
+   character := fileIn next.
+   charNum := character asInteger.
+   pathStr := bitTree at: charNum.
+   (1 to: pathStr size) do: [:i|
+      |binary|
+      binary := (((pathStr at: i) asInteger) - 48).
+      writeByte writeBit: binary.
+   ].
+].
+fileIn close.
 writeByte padZero.
 
 "fileOut << nl << ';;;;; using ByteWriter on treeFile ;;;;;' << nl.
