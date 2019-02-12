@@ -50,7 +50,7 @@ Object subclass: Leaf [
       (self printBase: aStream) << ')'.
    ]
 
-   inorder: visitor prefix: string stream: aStream[
+   inorder: visitor prefix: string [
       visitor value: char value: string.
    ]
 
@@ -85,12 +85,9 @@ Leaf subclass: Tree [
       (self printBase: aStream) << ',' << left << ',' << right << ')'.
    ]
 
-   inorder: visitor prefix: string stream: aStream[
-      left inorder: visitor prefix: (string, '0') stream: aStream.
-      right inorder: visitor prefix: (string, '1') stream: aStream.
-      "stdout << 'Tree->inorder: Left = ' << left << ' Right = ' << right << 'printing 1' << Character nl."
-      "stdout << '1'."
-      aStream << '(pop)'.
+   inorder: visitor prefix: string[
+      left inorder: visitor prefix: (string, '0').
+      right inorder: visitor prefix: (string, '1').
    ]
 
    postorder: aStream [
@@ -177,9 +174,6 @@ Object subclass: ByteWriter [
    fileOut := stdout.
 ].
 
-"encodedTreeStream := FileStream open: 'encodedTreeStream.txt' mode: FileStream write."
-"encodedTreeStream := 'encodedTreeStream.txt' asFilename writeStream."
-
 "Frequency Array"
 frequency := Array new: 257.
 
@@ -222,31 +216,42 @@ sortFreq := SortedCollection new.
    sortFreq add: tree.
 ].
 
-"fileOut << ';;;;;;;;;;;' << nl.
-fileOut << nl << 'creating bitTree array with sortFreq inorder' << 
-nl << ';;;;;;;;;;' << nl."
-
 "creating the bitTree that holds binary encoding of each char as a string"
 bitTree := Array new: 257.
 huffTree := sortFreq removeFirst.
 huffTree inorder: [:char :string |
-   stdout << nl <<'[' << char << ']=' << string.
+   "stdout << nl <<'[' << char << ']=' << string."
    bitTree at: (char asInteger) put: string.
-] prefix: '' stream: stdout.
+] prefix: ''.
 
-"fileOut << nl << nl << 'sortFreq postorder:prefix:stream:' << 
-nl << ';;;;;;;;;;' << nl."
+"option: -t --> prints out the encoding table"
+(1 to: 257) do: [:i|
+   |count countPadded|
+   count := frequency at: i.
+   (count > 0) ifTrue: [
+      countPadded := count printPaddedWith: Character space to: 6.
+      (i = 257) ifTrue: [
+         stdout << 'EOF' << countPadded << ' ' << (bitTree at: i).
+      ]
+      ifFalse: [
+         ((i > 32) & (i < 127)) ifTrue: [
+            stdout << ' ' << (i asCharacter) << ' '.
+         ]
+         ifFalse: [
+            stdout << (i printStringRadix: 16).
+         ].
+         stdout << countPadded << ' '.
+         stdout << (bitTree at: i).
+         stdout << nl.
+      ].
+   ].
+].
 
 "output 0 leaf and 1 for nodes to encodedTreeStream.txt"
 "(sortFreq last) postorder: [:char :string |
    encodedTreeStream << string << char.
 ] prefix: '' stream: encodedTreeStream."
 
-"handle the temp encodedTreeStream.txt file"
-"encodedTreeStream close."
-
-"open encodedTreeStream.txt to convert byte to bits"
-"treeFile := FileStream open: 'encodedTreeStream.txt' mode: FileStream read."
 writeByte := ByteWriter new: fileOut.
 
 "encoding path to characters in huffTree"
@@ -267,41 +272,6 @@ fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
 ].
 fileIn close.
 writeByte padZero.
-
-"fileOut << nl << ';;;;; using ByteWriter on treeFile ;;;;;' << nl.
-isLeaf := 0.
-[treeFile atEnd] whileFalse: [
-   character := treeFile next.
-   charNum := character asciiValue.
-   fileOut << nl << 'read character = ' << character << nl.
-   if character is a leaf
-   (isLeaf = 1) ifTrue: [
-      writeByte writeChar: charNum.
-      isLeaf := 0.
-   ].
-   if character = '0' and it is not a leaf
-   ((charNum = 48) & (isLeaf = 0)) ifTrue: [
-      writeByte writeBit: 0.
-      isLeaf := 1.
-   ].
-   if character = '1' and it is not a leaf
-   ((charNum = 49) & (isLeaf = 0)) ifTrue: [
-      writeByte writeBit: 1.
-   ].
-].
-writeByte padZero."
-
-"treeFile close."
-
-"fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
-[fileIn atEnd] whileFalse: [
-   character := fileIn next.
-   charNum := character asciiValue.
-   writeByte writeChar: charNum.
-].
-
-fileIn close.
-"
 
 "File remove: 'encodedTreeStream.txt'."
 ((Smalltalk arguments size) = 3) ifTrue: [
