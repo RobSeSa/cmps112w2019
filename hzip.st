@@ -154,6 +154,35 @@ Object subclass: ByteWriter [
    ]
 ]
 
+"stack class"
+Object subclass: Stack [
+   |head stack|
+
+   Stack class >> new: size [
+      | result |
+      result := super new.
+      result init: size.
+      ^ result
+   ]
+
+   init: size [
+      head := 1.
+      stack := Array new: size.
+   ]
+
+   pop [
+      |item|
+      item := stack at: head.
+      head := head - 1.
+      ^ item
+   ]
+
+   push: item [
+      head := head + 1.
+      stack := stack at: head put: item.
+   ]
+]
+
 "too many or too few arguments"
 ((Smalltalk arguments size) < 2) | ((Smalltalk arguments size) > 3) ifTrue: [
    stdout << 'Error: incorrect argument number. ' << nl << 'Exiting...' << nl.
@@ -165,6 +194,7 @@ Object subclass: ByteWriter [
    stdout << '3 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
    fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
    fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
+   flag := Smalltalk arguments at: 1.
 ].
 
 "hzip. -dtcu inputFile"
@@ -172,113 +202,120 @@ Object subclass: ByteWriter [
    stdout << '2 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
    fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
    fileOut := stdout.
+   flag := Smalltalk arguments at: 1.
 ].
 
-"Frequency Array"
-frequency := Array new: 257.
+((flag = '-c') | (flag = '-t')) ifTrue: [
+   "Frequency Array"
+   frequency := Array new: 257.
 
-"setting all elements in the frequency array to 0"
-(1 to: 257) do: [:i|
-   frequency at: i put: 0.
-].
+   "setting all elements in the frequency array to 0"
+   (1 to: 257) do: [:i|
+      frequency at: i put: 0.
+   ].
 
-"creating histogram from input file"
-[fileIn atEnd] whileFalse: [
-   character := fileIn next.
-   charNum := character asciiValue.
-   frequency at: charNum put: (frequency at: charNum) + 1.
-   "stdout << character."
-].
+   "creating histogram from input file"
+   [fileIn atEnd] whileFalse: [
+      character := fileIn next.
+      charNum := character asciiValue.
+      frequency at: charNum put: (frequency at: charNum) + 1.
+      "stdout << character."
+   ].
 
-fileIn close.
+   fileIn close.
 
-"add an EOF when the file closes to indicate end of file"
-frequency at: 257 put: 1.
+   "add an EOF when the file closes to indicate end of file"
+   frequency at: 257 put: 1.
 
-"creating the priority queue"
-sortFreq := SortedCollection new.
-(1 to: 257) do: [:i|
-   |node freqCount|
-   freqCount := frequency at: i.
-   (freqCount > 0) ifTrue: [
-      node := Leaf new: (i asCharacter) count: freqCount.
-      sortFreq add: node.
-   ]
-].
-
-"creating one tree from priority queue"
-[sortFreq size > 1] whileTrue: [
-   |lLeaf rLeaf tree totalCount|
-   lLeaf := sortFreq removeFirst.
-   rLeaf := sortFreq removeFirst.
-   totalCount := (lLeaf count) + (rLeaf count).
-   tree := Tree new: (lLeaf char) count: totalCount left: lLeaf right: rLeaf.
-   sortFreq add: tree.
-].
-
-"creating the bitTree that holds binary encoding of each char as a string"
-bitTree := Array new: 257.
-huffTree := sortFreq removeFirst.
-huffTree inorder: [:char :string |
-   "stdout << nl <<'[' << char << ']=' << string."
-   bitTree at: (char asInteger) put: string.
-] prefix: ''.
-
-"option: -t --> prints out the encoding table"
-(1 to: 257) do: [:i|
-   |count countPadded|
-   count := frequency at: i.
-   (count > 0) ifTrue: [
-      countPadded := count printPaddedWith: Character space to: 6.
-      (i = 257) ifTrue: [
-         stdout << 'EOF' << countPadded << ' ' << (bitTree at: i).
-      ]
-      ifFalse: [
-         ((i > 32) & (i < 127)) ifTrue: [
-            stdout << ' ' << (i asCharacter) << ' '.
-         ]
-         ifFalse: [
-            stdout << (i printStringRadix: 16).
-         ].
-         stdout << countPadded << ' '.
-         stdout << (bitTree at: i).
-         stdout << nl.
+   "creating the priority queue"
+   sortFreq := SortedCollection new.
+   (1 to: 257) do: [:i|
+      |node freqCount|
+      freqCount := frequency at: i.
+      (freqCount > 0) ifTrue: [
+         node := Leaf new: (i asCharacter) count: freqCount.
+         sortFreq add: node.
       ].
    ].
-].
 
-writeByte := ByteWriter new: fileOut.
-
-"encoding path to characters in huffTree"
-huffTree postorder: writeByte.
-writeByte endTree.
-
-"encoding fileIn contents"
-fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
-[fileIn atEnd] whileFalse: [
-   character := fileIn next.
-   charNum := character asInteger.
-   pathStr := bitTree at: charNum.
-   (1 to: pathStr size) do: [:i|
-      |binary|
-      binary := (((pathStr at: i) asInteger) - 48).
-      writeByte writeBit: binary.
+   "creating one tree from priority queue"
+   [sortFreq size > 1] whileTrue: [
+      |lLeaf rLeaf tree totalCount|
+      lLeaf := sortFreq removeFirst.
+      rLeaf := sortFreq removeFirst.
+      totalCount := (lLeaf count) + (rLeaf count).
+      tree := Tree new: (lLeaf char) count: totalCount left: lLeaf right: rLeaf.
+      sortFreq add: tree.
    ].
-].
 
-"writing EOF path to file"
-EOF := bitTree at: 257.
-(1 to: EOF size) do: [:i|
-   |binary|
-   binary := (((EOF at: i) asInteger) - 48).
-   writeByte writeBit: binary.
-].
-fileIn close.
-writeByte padZero.
+   "creating the bitTree that holds binary encoding of each char as a string"
+   bitTree := Array new: 257.
+   huffTree := sortFreq removeFirst.
+   huffTree inorder: [:char :string |
+      "stdout << nl <<'[' << char << ']=' << string."
+      bitTree at: (char asInteger) put: string.
+   ] prefix: ''.
 
-"File remove: 'encodedTreeStream.txt'."
-((Smalltalk arguments size) = 3) ifTrue: [
-   fileOut close.
+   "option: -t --> prints out the encoding table"
+   (flag = '-t') ifTrue: [
+      (1 to: 257) do: [:i|
+         |count countPadded|
+         count := frequency at: i.
+         (count > 0) ifTrue: [
+            countPadded := count printPaddedWith: Character space to: 6.
+            (i = 257) ifTrue: [
+               stdout << 'EOF' << countPadded << ' ' << (bitTree at: i).
+            ]
+            ifFalse: [
+               ((i > 32) & (i < 127)) ifTrue: [
+               stdout << ' ' << (i asCharacter) << ' '.
+               ]
+               ifFalse: [
+                  stdout << (i printStringRadix: 16).
+               ].
+               stdout << countPadded << ' '.
+               stdout << (bitTree at: i).
+               stdout << nl.
+            ].
+         ].
+      ].
+   ]
+   
+   "option: '-c' --> compress the given input file"
+   ifFalse: [
+      writeByte := ByteWriter new: fileOut.
+
+      "encoding path to characters in huffTree"
+      huffTree postorder: writeByte.
+      writeByte endTree.
+
+      "encoding fileIn contents"
+      fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+      [fileIn atEnd] whileFalse: [
+         character := fileIn next.
+         charNum := character asInteger.
+         pathStr := bitTree at: charNum.
+         (1 to: pathStr size) do: [:i|
+            |binary|
+            binary := (((pathStr at: i) asInteger) - 48).
+            writeByte writeBit: binary.
+         ].
+      ].
+
+      "writing EOF path to file"
+      EOF := bitTree at: 257.
+      (1 to: EOF size) do: [:i|
+         |binary|
+         binary := (((EOF at: i) asInteger) - 48).
+         writeByte writeBit: binary.
+      ].
+      fileIn close.
+      writeByte padZero.
+   ].
+
+   ((Smalltalk arguments size) = 3) ifTrue: [
+      fileOut close.
+   ].
 ].
 
 stdout << nl << 'Done.' << nl.
