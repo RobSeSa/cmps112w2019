@@ -247,11 +247,6 @@ huffTree inorder: [:char :string |
    ].
 ].
 
-"output 0 leaf and 1 for nodes to encodedTreeStream.txt"
-"(sortFreq last) postorder: [:char :string |
-   encodedTreeStream << string << char.
-] prefix: '' stream: encodedTreeStream."
-
 writeByte := ByteWriter new: fileOut.
 
 "encoding path to characters in huffTree"
@@ -269,6 +264,14 @@ fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
       binary := (((pathStr at: i) asInteger) - 48).
       writeByte writeBit: binary.
    ].
+].
+
+"writing EOF path to file"
+EOF := bitTree at: 257.
+(1 to: EOF size) do: [:i|
+   |binary|
+   binary := (((EOF at: i) asInteger) - 48).
+   writeByte writeBit: binary.
 ].
 fileIn close.
 writeByte padZero.
