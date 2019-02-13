@@ -154,6 +154,46 @@ Object subclass: ByteWriter [
    ]
 ]
 
+"reads bits from input file"
+Object subclass: FileReader [
+   |bitIdx byte aStream|
+
+   FileReader class >> new: inFile [
+      | result |
+      result := super new.
+      result init: inFile.
+      ^ result
+   ]
+
+   init: inFile [
+      bitIdx := 8.
+      aStream := inFile.
+      byte := '0'.
+   ]
+
+   readBit [
+      bitIdx := bitIdx - 1.
+      (bitIdx = 0) ifTrue: [
+         byte := aStream next.
+         bitIdx := 8.
+      ].
+      ^ byte bitAt: bitIdx.
+   ]
+
+   readByte [
+      | retByte |
+      (1 to: 8) do: [:i|
+         bitIdx := bitIdx - 1.
+         (bitIdx = 0) ifTrue: [
+            byte := aStream next.
+            bitIdx := 8.
+         ].
+         retByte := retByte bitAt: (9 - i) put: (byte at: bitIdx).
+      ].
+      ^ retByte
+   ]
+]
+
 "stack class"
 Object subclass: Stack [
    |head stack|
@@ -205,6 +245,7 @@ Object subclass: Stack [
    flag := Smalltalk arguments at: 1.
 ].
 
+"input file needs to be compressed"
 ((flag = '-c') | (flag = '-t')) ifTrue: [
    "Frequency Array"
    frequency := Array new: 257.
@@ -264,18 +305,18 @@ Object subclass: Stack [
          (count > 0) ifTrue: [
             countPadded := count printPaddedWith: Character space to: 6.
             (i = 257) ifTrue: [
-               stdout << 'EOF' << countPadded << ' ' << (bitTree at: i).
+               fileOut << 'EOF' << countPadded << ' ' << (bitTree at: i).
             ]
             ifFalse: [
                ((i > 32) & (i < 127)) ifTrue: [
-               stdout << ' ' << (i asCharacter) << ' '.
+               fileOut << ' ' << (i asCharacter) << ' '.
                ]
                ifFalse: [
-                  stdout << (i printStringRadix: 16).
+                  fileOut << (i printStringRadix: 16).
                ].
-               stdout << countPadded << ' '.
-               stdout << (bitTree at: i).
-               stdout << nl.
+               fileOut << countPadded << ' '.
+               fileOut << (bitTree at: i).
+               fileOut << nl.
             ].
          ].
       ].
@@ -312,10 +353,20 @@ Object subclass: Stack [
       fileIn close.
       writeByte padZero.
    ].
+].
 
-   ((Smalltalk arguments size) = 3) ifTrue: [
-      fileOut close.
-   ].
+"input file needs to be decompressed"
+(flag = '-u') ifTrue: [
+   readFile := FileReader new: fileIn.
+
+   "creates encoding tree"
+   treeStack := Stack new: 257.
+
+   "decompresses file contents to original state"
+].
+
+((Smalltalk arguments size) = 3) ifTrue: [
+   fileOut close.
 ].
 
 stdout << nl << 'Done.' << nl.
