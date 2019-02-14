@@ -77,6 +77,9 @@ Object subclass: Leaf [
 Leaf subclass: Tree [
    |left right|
    
+   left [^ left]
+   right [^ right]
+
    Tree class >> new: aChar count: aCount [
       self shouldNotImplement
    ]
@@ -180,7 +183,7 @@ Object subclass: FileReader [
    init: inFile [
       bitIdx := 8.
       aStream := inFile.
-      byte := 0.
+      byte := aStream nextByte.
    ]
 
    readBit [
@@ -215,39 +218,6 @@ Object subclass: FileReader [
          ].
       ].
       ^ retByte
-   ]
-]
-
-"stack class"
-Object subclass: Stack [
-   |head stack size|
-   size [^ size]
-
-   Stack class >> new: arrSize [
-      | result |
-      result := super new.
-      result init: arrSize.
-      ^ result
-   ]
-
-   init: arrSize [
-      head := 1.
-      size := 0.
-      stack := Array new: arrSize.
-   ]
-
-   pop [
-      |item|
-      item := stack at: head.
-      head := head - 1.
-      size := size - 1.
-      ^ item
-   ]
-
-   push: item [
-      head := head + 1.
-      size := size + 1.
-      stack := stack at: head put: item.
    ]
 ]
 
@@ -389,29 +359,42 @@ Object subclass: Stack [
    huffTree := nil.
 
    "creates encoding tree"
-   treeStack := Stack new: 257.
+   treeStack := OrderedCollection new: 257.
    [huffTree = nil] whileTrue: [
       |leaf char nodeOne nodeTwo tree|
       ((readFile readBit) = 0) ifTrue: [
          char := readFile readByte.
          leaf := Leaf new: char count: 0.
-         treeStack push: leaf.
+         treeStack add: leaf.
       ] ifFalse: [
          (treeStack size > 1) ifTrue: [
-            nodeOne := treeStack pop.
-            nodeTwo := treeStack pop.
-            tree := Tree new: (nodeOne char) count: 0 left: nodeOne right: nodeTwo.
-            treeStack push: tree.
+            nodeRight := treeStack removeLast.
+            nodeLeft := treeStack removeLast.
+            tree := Tree new: 0 count: 0 left: nodeLeft right: nodeRight.
+            treeStack add: tree.
          ] ifFalse: [
-            huffTree := treeStack pop.
+            huffTree := treeStack removeLast.
          ].
       ].
    ].
 
-   stdout << huffTree.
-
    "decompresses file contents to original state"
-
+   char := 0.
+   [char = 257] whileFalse: [
+      |tempNode|
+      tempNode := huffTree.
+      [tempNode class = Leaf] whileFalse: [
+         ((readFile readBit) = 0) ifTrue: [
+            tempNode := tempNode left.
+         ] ifFalse: [
+            tempNode := tempNode right.
+         ].
+      ].
+      char := tempNode char.
+      (char = 257) ifFalse: [
+         fileOut << (char asCharacter).
+      ].
+   ].
    fileIn close.
 ].
 
