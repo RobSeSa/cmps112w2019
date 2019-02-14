@@ -16,6 +16,7 @@ Character extend [
 "leaf class"
 Object subclass: Leaf [
    |char count|
+   "char is an integer, not a character"
    char [ ^ char ]
    count [^ count ]
    
@@ -43,7 +44,7 @@ Object subclass: Leaf [
    ]
 
    printBase: aStream [
-      ^ aStream << self class << '(' << (char visible) << ',' << count
+      ^ aStream << self class << '(' << ((char asCharacter) visible) << ',' << count
    ]
 
    printOn: aStream [
@@ -54,11 +55,22 @@ Object subclass: Leaf [
       visitor value: char value: string.
    ]
 
-   postorder: aStream[
-      aStream writeBit: 0.
-      aStream writeChar: (char asInteger).
+   postorder: visitor [
+      visitor writeBit: 0.
+      "if char = 257, char is EOF"
+      ((char = 257) | (char = 48)) ifTrue: [
+         (char = 257) ifTrue: [
+            visitor writeChar: 0.
+            visitor writeBit: 1.
+         ] 
+         ifFalse: [
+            visitor writeChar: 0.
+            visitor writeBit: 0.
+         ].
+      ] ifFalse: [
+         visitor writeChar: char.
+      ].
    ]
-   
 ]
 
 "Tree class; Tree is a subclass of Leaf"
@@ -90,10 +102,10 @@ Leaf subclass: Tree [
       right inorder: visitor prefix: (string, '1').
    ]
 
-   postorder: aStream [
-      left postorder: aStream.
-      right postorder: aStream.
-      aStream writeBit: 1.
+   postorder: visitor [
+      left postorder: visitor.
+      right postorder: visitor.
+      visitor writeBit: 1.
    ]
 ]
 
@@ -150,7 +162,7 @@ Object subclass: ByteWriter [
    ]
 
    endTree [
-      aStream nextPutByte: 1.
+      self writeBit: 1.
    ]
 ]
 
@@ -168,27 +180,39 @@ Object subclass: FileReader [
    init: inFile [
       bitIdx := 8.
       aStream := inFile.
-      byte := '0'.
+      byte := 0.
    ]
 
    readBit [
-      bitIdx := bitIdx - 1.
       (bitIdx = 0) ifTrue: [
-         byte := aStream next.
+         byte := aStream nextByte.
          bitIdx := 8.
       ].
-      ^ byte bitAt: bitIdx.
+      bitIdx := bitIdx - 1.
+      ^ byte bitAt: (bitIdx + 1).
    ]
 
    readByte [
       | retByte |
+      retByte := 0.
       (1 to: 8) do: [:i|
-         bitIdx := bitIdx - 1.
          (bitIdx = 0) ifTrue: [
-            byte := aStream next.
+            byte := aStream nextByte.
             bitIdx := 8.
          ].
-         retByte := retByte bitAt: (9 - i) put: (byte at: bitIdx).
+         retByte := retByte bitAt: (9 - i) put: (byte bitAt: bitIdx).
+         bitIdx := bitIdx - 1.
+      ].
+
+      "check to see if byte is 0 or EOF"
+      (retByte = 0) ifTrue: [
+         |nextBit|
+         nextBit := self readBit.
+         (nextBit = 0) ifTrue: [
+            ^ 0
+         ] ifFalse: [
+            ^ 257
+         ].
       ].
       ^ retByte
    ]
@@ -196,29 +220,33 @@ Object subclass: FileReader [
 
 "stack class"
 Object subclass: Stack [
-   |head stack|
+   |head stack size|
+   size [^ size]
 
-   Stack class >> new: size [
+   Stack class >> new: arrSize [
       | result |
       result := super new.
-      result init: size.
+      result init: arrSize.
       ^ result
    ]
 
-   init: size [
+   init: arrSize [
       head := 1.
-      stack := Array new: size.
+      size := 0.
+      stack := Array new: arrSize.
    ]
 
    pop [
       |item|
       item := stack at: head.
       head := head - 1.
+      size := size - 1.
       ^ item
    ]
 
    push: item [
       head := head + 1.
+      size := size + 1.
       stack := stack at: head put: item.
    ]
 ]
@@ -274,7 +302,7 @@ Object subclass: Stack [
       |node freqCount|
       freqCount := frequency at: i.
       (freqCount > 0) ifTrue: [
-         node := Leaf new: (i asCharacter) count: freqCount.
+         node := Leaf new: i count: freqCount.
          sortFreq add: node.
       ].
    ].
@@ -358,11 +386,33 @@ Object subclass: Stack [
 "input file needs to be decompressed"
 (flag = '-u') ifTrue: [
    readFile := FileReader new: fileIn.
+   huffTree := nil.
 
    "creates encoding tree"
    treeStack := Stack new: 257.
+   [huffTree = nil] whileTrue: [
+      |leaf char nodeOne nodeTwo tree|
+      ((readFile readBit) = 0) ifTrue: [
+         char := readFile readByte.
+         leaf := Leaf new: char count: 0.
+         treeStack push: leaf.
+      ] ifFalse: [
+         (treeStack size > 1) ifTrue: [
+            nodeOne := treeStack pop.
+            nodeTwo := treeStack pop.
+            tree := Tree new: (nodeOne char) count: 0 left: nodeOne right: nodeTwo.
+            treeStack push: tree.
+         ] ifFalse: [
+            huffTree := treeStack pop.
+         ].
+      ].
+   ].
+
+   stdout << huffTree.
 
    "decompresses file contents to original state"
+
+   fileIn close.
 ].
 
 ((Smalltalk arguments size) = 3) ifTrue: [
