@@ -46,7 +46,8 @@ Object subclass: Leaf [
    ]
 
    printBase: aStream [
-      ^ aStream << self class << '(' << ((char asCharacter) visible) << ',' << count
+      ^ aStream << self class << '(' 
+        << ((char asCharacter) visible) << ',' << count
    ]
 
    printOn: aStream [
@@ -64,8 +65,7 @@ Object subclass: Leaf [
          (char = 257) ifTrue: [
             visitor writeChar: 0.
             visitor writeBit: 1.
-         ] 
-         ifFalse: [
+         ] ifFalse: [
             visitor writeChar: 0.
             visitor writeBit: 0.
          ].
@@ -143,7 +143,8 @@ Object subclass: ByteWriter [
 
    writeChar: aChar [
       (1 to: 8) do: [:i|
-         byteWrite := byteWrite bitAt: byteIdx put: (aChar bitAt: (9 - i)).
+         byteWrite := byteWrite bitAt: byteIdx 
+                                put: (aChar bitAt: (9 - i)).
          byteIdx := byteIdx - 1.
 
          byteIdx < 1 ifTrue: [
@@ -220,21 +221,26 @@ Object subclass: FileReader [
 ]
 
 "too many or too few arguments"
-((Smalltalk arguments size) < 2) | ((Smalltalk arguments size) > 3) ifTrue: [
-   stdout << 'Error: incorrect argument number. ' << nl << 'Exiting...' << nl.
+((Smalltalk arguments size) < 2) | 
+((Smalltalk arguments size) > 3) ifTrue: [
+   stdout << 'Error: incorrect argument number. ' 
+          << nl << 'Exiting...' << nl.
    ObjectMemory quit: 1.
 ].
 
 "hzip. -dtcu inputFile outputFile"
 ((Smalltalk arguments size) = 3) ifTrue: [
-   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
-   fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) 
+                        mode: FileStream read.
+   fileOut := FileStream open: (Smalltalk arguments at: 3) 
+                         mode: FileStream write.
    flag := Smalltalk arguments at: 1.
 ].
 
 "hzip. -dtcu inputFile"
 ((Smalltalk arguments size) = 2) ifTrue: [
-   fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+   fileIn := FileStream open: (Smalltalk arguments at: 2) 
+                        mode: FileStream read.
    fileOut := stdout.
    flag := Smalltalk arguments at: 1.
 ].
@@ -278,11 +284,13 @@ Object subclass: FileReader [
       lLeaf := sortFreq removeFirst.
       rLeaf := sortFreq removeFirst.
       totalCount := (lLeaf count) + (rLeaf count).
-      tree := Tree new: (lLeaf char) count: totalCount left: lLeaf right: rLeaf.
+      tree := Tree new: (lLeaf char) count: totalCount 
+                   left: lLeaf right: rLeaf.
       sortFreq add: tree.
    ].
 
-   "creating the bitTree that holds binary encoding of each char as a string"
+   "creating the bitTree that holds binary encoding of each char as 
+   a string"
    bitTree := Array new: 257.
    huffTree := sortFreq removeFirst.
    huffTree inorder: [:char :string |
@@ -295,15 +303,15 @@ Object subclass: FileReader [
          |count countPadded|
          count := frequency at: i.
          (count > 0) ifTrue: [
-            countPadded := count printPaddedWith: Character space to: 6.
+            countPadded := count 
+                           printPaddedWith: Character space to: 6.
             (i = 257) ifTrue: [
-               fileOut << 'EOF' << countPadded << ' ' << (bitTree at: i).
-            ]
-            ifFalse: [
+               fileOut << 'EOF' << countPadded 
+                       << ' ' << (bitTree at: i).
+            ] ifFalse: [
                ((i > 32) & (i < 127)) ifTrue: [
                fileOut << ' ' << (i asCharacter) << ' '.
-               ]
-               ifFalse: [
+               ] ifFalse: [
                   fileOut << (i printStringRadix: 16).
                ].
                fileOut << countPadded << ' '.
@@ -323,7 +331,8 @@ Object subclass: FileReader [
       writeByte endTree.
 
       "encoding fileIn contents"
-      fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
+      fileIn := FileStream open: (Smalltalk arguments at: 2) 
+                           mode: FileStream read.
       [fileIn atEnd] whileFalse: [
          character := fileIn next.
          charNum := character asInteger.
@@ -364,7 +373,8 @@ Object subclass: FileReader [
          (treeStack size > 1) ifTrue: [
             nodeRight := treeStack removeLast.
             nodeLeft := treeStack removeLast.
-            tree := Tree new: 0 count: 0 left: nodeLeft right: nodeRight.
+            tree := Tree new: 0 count: 0 left: nodeLeft 
+                                         right: nodeRight.
             treeStack add: tree.
          ] ifFalse: [
             huffTree := treeStack removeLast.
