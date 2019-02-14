@@ -158,9 +158,8 @@ Object subclass: ByteWriter [
       "byteIdx = 8 means there are not bits in byteWrite to be written"
       (byteIdx < 8) ifTrue: [
          (1 to: byteIdx) do: [:i|
-            byteWrite := byteWrite bitAt: (9 - i) put: 0.
+            self writeBit: 0.
          ].
-         aStream nextPutByte: byteWrite.
       ].
    ]
 
