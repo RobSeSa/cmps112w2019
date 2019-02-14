@@ -1,4 +1,6 @@
 #!/afs/cats.ucsc.edu/courses/cmps112-wm/usr/smalltalk/bin/gst -f
+"Robert Sato (rssato)"
+"Huanlei Wu (hwu43)"
 
 nl := Character nl.
 
@@ -140,11 +142,8 @@ Object subclass: ByteWriter [
    ]
 
    writeChar: aChar [
-      "aStream << 'input to writeChar = ' << aChar << Character nl."
       (1 to: 8) do: [:i|
          byteWrite := byteWrite bitAt: byteIdx put: (aChar bitAt: (9 - i)).
-         "aStream << 'putting: ' << (aChar bitAt: (9 - i)) << ' at bit ' << byteIdx 
-            << Character nl."
          byteIdx := byteIdx - 1.
 
          byteIdx < 1 ifTrue: [
@@ -228,7 +227,6 @@ Object subclass: FileReader [
 
 "hzip. -dtcu inputFile outputFile"
 ((Smalltalk arguments size) = 3) ifTrue: [
-   stdout << '3 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
    fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
    fileOut := FileStream open: (Smalltalk arguments at: 3) mode: FileStream write.
    flag := Smalltalk arguments at: 1.
@@ -236,7 +234,6 @@ Object subclass: FileReader [
 
 "hzip. -dtcu inputFile"
 ((Smalltalk arguments size) = 2) ifTrue: [
-   stdout << '2 arguments detected.' << nl << 'options = ' << (Smalltalk arguments at: 1) << nl.
    fileIn := FileStream open: (Smalltalk arguments at: 2) mode: FileStream read.
    fileOut := stdout.
    flag := Smalltalk arguments at: 1.
@@ -257,7 +254,6 @@ Object subclass: FileReader [
       character := fileIn next.
       charNum := character asciiValue.
       frequency at: charNum put: (frequency at: charNum) + 1.
-      "stdout << character."
    ].
 
    fileIn close.
@@ -290,7 +286,6 @@ Object subclass: FileReader [
    bitTree := Array new: 257.
    huffTree := sortFreq removeFirst.
    huffTree inorder: [:char :string |
-      "stdout << nl <<'[' << char << ']=' << string."
       bitTree at: (char asInteger) put: string.
    ] prefix: ''.
 
@@ -400,5 +395,3 @@ Object subclass: FileReader [
 ((Smalltalk arguments size) = 3) ifTrue: [
    fileOut close.
 ].
-
-stdout << nl << 'Done.' << nl.
