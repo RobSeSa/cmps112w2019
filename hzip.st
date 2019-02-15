@@ -312,7 +312,11 @@ Object subclass: FileReader [
                ((i > 32) & (i < 127)) ifTrue: [
                fileOut << ' ' << (i asCharacter) << ' '.
                ] ifFalse: [
-                  fileOut << (i printStringRadix: 16).
+                  (i < 16) ifTrue: [
+                     fileOut << 'x0' << (i printString: 16).
+                  ] ifFalse: [
+                     fileOut << 'x' << (i printString: 16).
+                  ].
                ].
                fileOut << countPadded << ' '.
                fileOut << (bitTree at: i).
