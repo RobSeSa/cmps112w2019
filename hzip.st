@@ -60,9 +60,9 @@ Object subclass: Leaf [
 
    postorder: visitor [
       visitor writeBit: 0.
-      "if char = 257, char is EOF"
-      ((char = 257) | (char = 48)) ifTrue: [
-         (char = 257) ifTrue: [
+      "if char = 256, char is EOF"
+      ((char = 256) | (char = 0)) ifTrue: [
+         (char = 256) ifTrue: [
             visitor writeChar: 0.
             visitor writeBit: 1.
          ] ifFalse: [
@@ -205,7 +205,7 @@ Object subclass: FileReader [
          retByte := retByte bitAt: (9 - i) put: (byte bitAt: bitIdx).
          bitIdx := bitIdx - 1.
       ].
-
+      
       "check to see if byte is 0 or EOF"
       (retByte = 0) ifTrue: [
          |nextBit|
@@ -213,7 +213,7 @@ Object subclass: FileReader [
          (nextBit = 0) ifTrue: [
             ^ 0
          ] ifFalse: [
-            ^ 257
+            ^ 256
          ].
       ].
       ^ retByte
@@ -259,6 +259,7 @@ Object subclass: FileReader [
    [fileIn atEnd] whileFalse: [
       character := fileIn next.
       charNum := character asciiValue.
+      charNum := charNum + 1.
       frequency at: charNum put: (frequency at: charNum) + 1.
    ].
 
@@ -273,7 +274,7 @@ Object subclass: FileReader [
       |node freqCount|
       freqCount := frequency at: i.
       (freqCount > 0) ifTrue: [
-         node := Leaf new: i count: freqCount.
+         node := Leaf new: (i - 1) count: freqCount.
          sortFreq add: node.
       ].
    ].
@@ -294,7 +295,7 @@ Object subclass: FileReader [
    bitTree := Array new: 257.
    huffTree := sortFreq removeFirst.
    huffTree inorder: [:char :string |
-      bitTree at: (char asInteger) put: string.
+      bitTree at: (char + 1) put: string.
    ] prefix: ''.
 
    "option: -t --> prints out the encoding table"
@@ -309,13 +310,13 @@ Object subclass: FileReader [
                fileOut << 'EOF' << countPadded 
                        << ' ' << (bitTree at: i).
             ] ifFalse: [
-               ((i > 32) & (i < 127)) ifTrue: [
-               fileOut << ' ' << (i asCharacter) << ' '.
+               ((i > 33) & (i < 128)) ifTrue: [
+               fileOut << ' ' << ((i - 1) asCharacter) << ' '.
                ] ifFalse: [
-                  (i < 16) ifTrue: [
-                     fileOut << 'x0' << (i printString: 16).
+                  (i < 17) ifTrue: [
+                     fileOut << 'x0' << ((i - 1) printString: 16).
                   ] ifFalse: [
-                     fileOut << 'x' << (i printString: 16).
+                     fileOut << 'x' << ((i - 1) printString: 16).
                   ].
                ].
                fileOut << countPadded << ' '.
@@ -340,6 +341,7 @@ Object subclass: FileReader [
       [fileIn atEnd] whileFalse: [
          character := fileIn next.
          charNum := character asInteger.
+         charNum := charNum + 1.
          pathStr := bitTree at: charNum.
          (1 to: pathStr size) do: [:i|
             |binary|
@@ -388,19 +390,21 @@ Object subclass: FileReader [
 
    "decompresses file contents to original state"
    char := 0.
-   [char = 257] whileFalse: [
+   [char = 256] whileFalse: [
       |tempNode|
       tempNode := huffTree.
       [tempNode class = Leaf] whileFalse: [
-         ((readFile readBit) = 0) ifTrue: [
+         |number|
+         number := readFile readBit.
+         (number = 0) ifTrue: [
             tempNode := tempNode left.
          ] ifFalse: [
             tempNode := tempNode right.
          ].
       ].
       char := tempNode char.
-      (char = 257) ifFalse: [
-         fileOut << (char asCharacter).
+      (char = 256) ifFalse: [
+         fileOut nextPutByte: char.
       ].
    ].
    fileIn close.
