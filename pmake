@@ -1,0 +1,11 @@
+#!/usr/bin/perl
+# Robert Sato (rssato)
+# Huanlei Wu (hwu43)
+use strict;
+use warnings;
+
+sub system() {
+}
+
+sub stat() {
+}
