@@ -1,11 +1,67 @@
 #!/usr/bin/perl
 # Robert Sato (rssato)
 # Huanlei Wu (hwu43)
+
 use strict;
 use warnings;
+use Getopt::Std;
+$0 =~ s|.*/||;
 
-sub system() {
+# signals and their description
+my %strsignal = (
+    1 => "Hangup",
+    2 => "Interrupt",
+    3 => "Quit",
+    4 => "Illegal instruction",
+    5 => "Trace/breakpoint trap",
+    6 => "Aborted",
+    7 => "Bus error",
+    8 => "Floating point exception",
+    9 => "Killed",
+   11 => "Segmentation fault",
+   13 => "Broken pipe",
+   14 => "Alarm clock",
+   15 => "Terminated",
+   16 => "Stack fault",
+   17 => "Child exited",
+   18 => "Continued",
+   19 => "Stopped (signal)",
+   20 => "Stopped",
+   21 => "Stopped (tty input)",
+   22 => "Stopped (tty output)",
+   24 => "CPU time limit exceeded",
+   25 => "File size limit exceeded",
+   26 => "Virtual timer expired",
+   27 => "Profiling timer expired",
+   28 => "Window changed",
+   29 => "I/O possible",
+   30 => "Power failure",
+   31 => "Bad system call",
+);
+
+# sees if flag d is typed in command line
+# if flag d is set, $opt_d will be true
+getopts('d');
+
+# parses a line of the given file
+# word before the colon is the target
+# word(s) after the colon are the dependencies
+sub parse_dep ($) {
+   my ($line) = @_;
+   return undef unless $line =~ m/^(\S+)\s*:\s*(.*?)\s*$/;
+   my ($target, $dependency) = ($1, $2);
+   my @dependencies = split m/\s+/, $dependency;
+   return $target, \@dependencies;
 }
 
-sub stat() {
+my %graph;      # hashtable to store target and dependencies
+
+# goes through the whole Makefile
+# uses function parse_dep to parse each line of the file
+open(FILE, 'Makefile') || die("Could not open Makefile\n");
+while (my $line = <FILE>) {
+   my ($target, $deps) = parse_dep $line;
+   print "$0: syntax error: $line\n" and next unless defined $target;
+   print $line;
+   $graph{$target} = $deps;
 }
