@@ -46,12 +46,16 @@ getopts('d');
 # parses a line of the given file
 # word before the colon is the target
 # word(s) after the colon are the dependencies
-sub parse_dep ($) {
+sub targetAndDep ($) {
    my ($line) = @_;
    return undef unless $line =~ m/^(\S+)\s*:\s*(.*?)\s*$/;
    my ($target, $dependency) = ($1, $2);
    my @dependencies = split m/\s+/, $dependency;
    return $target, \@dependencies;
+}
+
+sub command ($$) {
+
 }
 
 my %graph;      # hashtable to store target and dependencies
@@ -60,7 +64,14 @@ my %graph;      # hashtable to store target and dependencies
 # uses function parse_dep to parse each line of the file
 open(FILE, 'Makefile') || die("Could not open Makefile\n");
 while (my $line = <FILE>) {
-   my ($target, $deps) = parse_dep $line;
+   my $target;
+   my $deps;
+   if ($line =~ m/^(\S+)\s*:\s*(.*?)\s*$/) {
+      ($target, $deps) = targetAndDep $line;
+   } elsif ($line =~ m/^\S+\s*=\s*\.*?\s*$/) {
+
+   }
+   #my ($target, $deps) = targetAndDep $line;
    print "$0: syntax error: $line\n" and next unless defined $target;
    print $line;
    $graph{$target} = $deps;
