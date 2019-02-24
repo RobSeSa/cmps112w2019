@@ -39,6 +39,13 @@ my %strsignal = (
    31 => "Bad system call",
 );
 
+sub mtime($) {
+   my ($filename) = @_;
+   return undef unless defined $filename;
+   my @stat = stat $filename;
+   return @stat ? $stat[9] : undef;
+}
+
 # sees if flag d is typed in command line
 # if flag d is set, $opt_d will be true
 getopts('d');
@@ -63,5 +70,34 @@ while (my $line = <FILE>) {
    my ($target, $deps) = parse_dep $line;
    print "$0: syntax error: $line\n" and next unless defined $target;
    print $line;
+   my $target_time = mtime $target;
+   if($target_time){
+      print "$target time = $target_time\n";
+   }
+   else {
+      print "$target time is undefined\n";
+   }
+   if($deps) {
+      #foreach $var (@deps){
+      #   print "deps = $var";
+      #}
+      print "DEPENDENCIES = @$deps\n";
+      foreach my $var (@$deps) {
+         my $var_time = mtime $var;
+         print "$var time = $var_time\n";
+         my $difference = $var_time - $target_time;
+         if($difference > 0){
+            print "$var needs to be compiled\n$var edited $difference after $target\n";
+         }
+         else{
+            print "no need to recompile $var as $var edited $difference after $target\n";
+         }
+      }
+      print "\n";
+
+   }
+   #foreach $var (@deps) {
+   #   print "\$var = $var\n";
+   #}
    $graph{$target} = $deps;
 }
