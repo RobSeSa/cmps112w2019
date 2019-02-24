@@ -58,21 +58,39 @@ sub command ($$) {
 
 }
 
-my %graph;      # hashtable to store target and dependencies
+sub getMacro ($) {
+   my ($line) = @_;
+   $line =~ m/^(\S+)\s*=\s*(.*?)\s*$/;
+   my ($var, $val) = ($1, $2);
+   my @values = split m/\s+/, $val;
+   return $var, \@values;
+}
+
+my %graph;      # hash table to store target and dependencies
+my %macro;      # hash table to store macros
 
 # goes through the whole Makefile
 # uses function parse_dep to parse each line of the file
 open(FILE, 'Makefile') || die("Could not open Makefile\n");
 while (my $line = <FILE>) {
-   my $target;
-   my $deps;
-   if ($line =~ m/^(\S+)\s*:\s*(.*?)\s*$/) {
+   my ($target, $deps);
+   # line is a comment
+   if ($line =~ m/^#.*$/) {
+      # do nothing
+   # line contains a target and dependencies
+   } elsif ($line =~ m/^(\S+)\s*:\s*(.*?)\s*$/) {
       ($target, $deps) = targetAndDep $line;
-   } elsif ($line =~ m/^\S+\s*=\s*\.*?\s*$/) {
-
+      $graph{$target} = $deps;
+   # line contains macro
+   } elsif ($line =~ m/^\S+\s*=\s*.*?\s*$/) {
+      my ($var, $val) = getMacro $line;
+      $macro{$var} = $val;
+   # line contains command
+   } elsif ($line =~ m/^\t.*\s*$/) {
+   
    }
+
    #my ($target, $deps) = targetAndDep $line;
-   print "$0: syntax error: $line\n" and next unless defined $target;
-   print $line;
-   $graph{$target} = $deps;
+   #print "$0: syntax error: $line\n" and next unless defined $target;
+   print $line unless ($line =~ m/^#.*$/);
 }
