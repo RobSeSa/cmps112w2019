@@ -1,4 +1,4 @@
 #hello: hello.c
-goodbye: goodbye.c
 blah = hi
+goodbye: goodbye.c
 	hi again
