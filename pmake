@@ -134,7 +134,7 @@ sub timeCompare ($$) {
 sub tree_time_cmp($) {
    my ($mytarget) = @_;
    if (! exists $deps{$mytarget}) {
-      print "here\n";
+      print "\$deps{$mytarget} DNE returning 0..\n";
       return 0;
    } else {
       my $dependency = $deps{$mytarget};
@@ -142,7 +142,9 @@ sub tree_time_cmp($) {
          if (timeCompare ($mytarget, $var)) {
             return 1;
          } else {
-            if (tree_time_cmp $var) {
+            print "\$var = $var\n";
+            if (tree_time_cmp ($var)) {
+               print "tree_time_cmp $var was true!\n returning 1..\n";
                return 1;
             }
          }
@@ -151,4 +153,9 @@ sub tree_time_cmp($) {
    }
 }
 
-tree_time_cmp "goodbye";
+if(tree_time_cmp "goodbye") {
+   print "tree_time_cmp \"goodbye\" is true!\n"
+}
+else {
+   print "tree_time_cmp \"goodbye\" is false!\n"
+}
