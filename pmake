@@ -54,6 +54,13 @@ sub targetAndDep ($) {
    return $target, \@dependencies;
 }
 
+sub mtime($) {
+   my ($filename) = @_;
+   return undef unless defined $filename;
+   my @stat = stat $filename;
+   return @stat ? $stat[9] : undef;
+}
+
 sub command ($$) {
 
 }
@@ -81,6 +88,34 @@ while (my $line = <FILE>) {
    } elsif ($line =~ m/^(\S+)\s*:\s*(.*?)\s*$/) {
       ($target, $deps) = targetAndDep $line;
       $graph{$target} = $deps;
+      my $target_time = mtime $target;
+      if($target_time){
+         print "$target time = $target_time\n";
+      }
+      else {
+         print "$target time is undefined\n";
+      }
+      if($deps) {
+         print "DEPENDENCIES = @$deps\n";
+         foreach my $var (@$deps) {
+            my $var_time = mtime $var;
+            print "$var time = $var_time\n";
+            if($var_time = undef) {
+               print "$var does not exist\n";
+            }
+            else {
+               my $difference = $var_time - $target_time;
+               if($difference > 0){
+                   print "$var needs to be compiled\n$var edited $difference after $target\n";
+               }
+                else{
+                  print "no need to recompile $var as $var edited $difference after $target\n";
+               }
+            }
+         }
+         print "\n";
+      }
+
    # line contains macro
    } elsif ($line =~ m/^\S+\s*=\s*.*?\s*$/) {
       my ($var, $val) = getMacro $line;
