@@ -7,8 +7,6 @@ all : foo bar
 
 foo :
 	@ echo foo - command not echoed
-	foo
-	bar
 
 bar :
 	@ echo bar - command not echoed

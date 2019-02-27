@@ -103,23 +103,16 @@ while (my $line = <FILE>) {
       if (exists $commands{$target}) {
          my $array = $commands{$target};
          push (@$array, $1);
-         print "pushing $1 into commands{$target}\n";
+         #print "pushing $1 into commands{$target}\n";
          $commands{$target} = $array;
       } else {
          my @newArr = ($1);
          $commands{$target} = \@newArr;
-         print "HHHHHHHELLLLLLOOOOO $target\n";
+         #print "HHHHHHHELLLLLLOOOOO $target\n";
       }
-         #my @arr = $commands{$target};
-         #my $size = @arr;
-         #print "size: $size\n";
    }
 }
 close(FILE);
-
-my @foo = $commands{"foo"};
-my $fooSize = @foo;
-print "fooSize = $fooSize\n";
 
 # compares given target with given dependency
 sub timeCompare ($$) {
@@ -131,19 +124,19 @@ sub timeCompare ($$) {
    #if target time not defined target is just a target and not a file
    #therefore all of its dependencies and commands should be executed
    else {
-      print "$mytarget time is undefined\n";
+      #print "$mytarget time is undefined\n";
       return 1;
    }
    my $var_time = mtime $var;
    #print "var: $var\n";
    #print "$var time = $var_time\n";
    if(! defined $var_time) {
-      print "$var does not exist\n";
+      #print "$var does not exist\n";
       return 1;
    }
    else {
       my $difference = $var_time - $target_time;
-      print "difference: $difference\n";
+      #print "difference: $difference\n";
       if($difference > 0){
          #print "$var needs to be compiled\n$var edited $difference after $mytarget\n";
          return 1;
@@ -180,29 +173,33 @@ sub tree_time_cmp {
 
 sub exec_cmd {
    my ($target) = @_;
-   print "target = $target\n";
+   #print "target = $target\n";
    my $command = $commands{$target};
    my $size = @$command;
-   print "size: $size\n";
+   #print "size: $size\n";
    foreach my $var (@$command) {
       if (defined $var){
-         print "Executing commands: \"$var\" under target: $target\n";
+         #print "Executing commands: \"$var\" under target: $target\n";
          if ($var =~ m/^@\s*(.*?)\s*$/) {
-         
+            system($1);
          }
          elsif ($var =~ m/^-\s*(.*?)\s*$/) {
-            print "Executing: $1\n";
+            print "$var\n";
+            system($1);
+         } else {
+            print "$var\n";
+            system ($var);
          }
       }
       else {
-         print "$target has no commands\n";
+         #print "$target has no commands\n";
       }
    }
 }
 
 sub interp_target {
    my ($mytarget) = @_;
-   print "interpreting $mytarget...\n";
+   #print "interpreting $mytarget...\n";
    if ((! exists $deps{$mytarget}) && (! defined $mytarget))  {
       print ";;;;;;;;;; ERROR ;;;;;;;;;;\n$mytarget not found in dep table or directory\n";
    }
