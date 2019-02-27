@@ -100,28 +100,26 @@ while (my $line = <FILE>) {
       $macro{$var} = $val;
    # line contains command
    } elsif ($line =~ m/^\t(.*)\s*$/) {
-      my @array = $commands{$target};
-      my $sizeOne = @array;
-      print "size one: $sizeOne\n";
-      my ($first) = @array;
-      print "first : $first\n";
-      if (@array) {
-         my $sizeBefore = @array;
-         print "size before: $sizeBefore\n";
-         push (@array, $1);
+      if (exists $commands{$target}) {
+         my $array = $commands{$target};
+         push (@$array, $1);
          print "pushing $1 into commands{$target}\n";
-         $commands{$target} = \@array;
-         my $sizeAfter = @array;
-         print "size after: $sizeAfter\n";
-      }
-      else {
+         $commands{$target} = $array;
+      } else {
          my @newArr = ($1);
-         print "HHHHEEEEEELLLLLOOOOOO\n";
          $commands{$target} = \@newArr;
+         print "HHHHHHHELLLLLLOOOOO $target\n";
       }
+         #my @arr = $commands{$target};
+         #my $size = @arr;
+         #print "size: $size\n";
    }
 }
 close(FILE);
+
+my @foo = $commands{"foo"};
+my $fooSize = @foo;
+print "fooSize = $fooSize\n";
 
 # compares given target with given dependency
 sub timeCompare ($$) {
@@ -182,6 +180,7 @@ sub tree_time_cmp {
 
 sub exec_cmd {
    my ($target) = @_;
+   print "target = $target\n";
    my $command = $commands{$target};
    my $size = @$command;
    print "size: $size\n";
@@ -240,5 +239,3 @@ else {
    #print";;;;ERROR too many args;;;;;\n";
 }
 #print "\$length = $length\n";
-my $print = $commands{"all"};
-print "@$print = targets commands\n";
