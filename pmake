@@ -99,6 +99,7 @@ while (my $line = <FILE>) {
       $commands{$target} = $1;
    }
 }
+close(FILE);
 
 # compares given target with given dependency
 sub timeCompare ($$) {
@@ -131,7 +132,7 @@ sub timeCompare ($$) {
 }
 
 # compares all interior dependencies for time discrepancies
-sub tree_time_cmp($) {
+sub tree_time_cmp {
    my ($mytarget) = @_;
    if (! exists $deps{$mytarget}) {
       print "\$deps{$mytarget} DNE returning 0..\n";
@@ -153,9 +154,36 @@ sub tree_time_cmp($) {
    }
 }
 
-if(tree_time_cmp "goodbye") {
-   print "tree_time_cmp \"goodbye\" is true!\n"
+sub exec_cmd {
+   my ($target) = @_;
+   my $commands = $commands{$target};
+   if (defined $commands){
+      print "Executing commands: $commands\n";
+   }
+   else {
+      print "$target has no commands\n";
+   }
 }
-else {
-   print "tree_time_cmp \"goodbye\" is false!\n"
+
+sub interp_target {
+   my ($mytarget) = @_;
+   if ((! exists $deps{$mytarget}) && (! defined $mytarget))  {
+      print ";;;;;;;;;; ERROR ;;;;;;;;;;\n$mytarget not found in dep table or directory\n";
+   }
+   else {
+      if (! exists $deps{$mytarget}) {
+         print "$mytarget is not in deps table but in the directory\n";
+      }
+      else {
+         my $dependency = $deps{$mytarget};
+         foreach my $var (@$dependency) {
+            if (timeCompare ($mytarget, $var)) {
+               interp_target $var;
+            }
+            exec_cmd $mytarget;
+         }
+      }
+   }
 }
+
+interp_target "goodbye";
