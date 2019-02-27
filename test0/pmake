@@ -100,15 +100,23 @@ while (my $line = <FILE>) {
       $macro{$var} = $val;
    # line contains command
    } elsif ($line =~ m/^\t(.*)\s*$/) {
-      $commands{$target} = $1;
       my @array = $commands{$target};
-      if (defined @array) {
+      my $sizeOne = @array;
+      print "size one: $sizeOne\n";
+      my ($first) = @array;
+      print "first : $first\n";
+      if (@array) {
+         my $sizeBefore = @array;
+         print "size before: $sizeBefore\n";
          push (@array, $1);
          print "pushing $1 into commands{$target}\n";
          $commands{$target} = \@array;
+         my $sizeAfter = @array;
+         print "size after: $sizeAfter\n";
       }
       else {
          my @newArr = ($1);
+         print "HHHHEEEEEELLLLLOOOOOO\n";
          $commands{$target} = \@newArr;
       }
    }
@@ -120,7 +128,7 @@ sub timeCompare ($$) {
    my ($mytarget, $var) = (@_);
    my $target_time = mtime $mytarget;
    if($target_time){
-      print "$mytarget time = $target_time\n";
+      #print "$mytarget time = $target_time\n";
    }
    #if target time not defined target is just a target and not a file
    #therefore all of its dependencies and commands should be executed
@@ -129,8 +137,8 @@ sub timeCompare ($$) {
       return 1;
    }
    my $var_time = mtime $var;
-   print "var: $var\n";
-   print "$var time = $var_time\n";
+   #print "var: $var\n";
+   #print "$var time = $var_time\n";
    if(! defined $var_time) {
       print "$var does not exist\n";
       return 1;
@@ -139,11 +147,11 @@ sub timeCompare ($$) {
       my $difference = $var_time - $target_time;
       print "difference: $difference\n";
       if($difference > 0){
-         print "$var needs to be compiled\n$var edited $difference after $mytarget\n";
+         #print "$var needs to be compiled\n$var edited $difference after $mytarget\n";
          return 1;
       }
       else{
-         print "no need to recompile $var as $var edited $difference after $mytarget\n";
+         #print "no need to recompile $var as $var edited $difference after $mytarget\n";
          return 0;
       }
    }
@@ -153,7 +161,7 @@ sub timeCompare ($$) {
 sub tree_time_cmp {
    my ($mytarget) = @_;
    if (! exists $deps{$mytarget}) {
-      print "\$deps{$mytarget} DNE returning 0..\n";
+      #print "\$deps{$mytarget} DNE returning 0..\n";
       return 0;
    } else {
       my $dependency = $deps{$mytarget};
@@ -161,9 +169,9 @@ sub tree_time_cmp {
          if (timeCompare ($mytarget, $var)) {
             return 1;
          } else {
-            print "\$var = $var\n";
+            #print "\$var = $var\n";
             if (tree_time_cmp ($var)) {
-               print "tree_time_cmp $var was true!\n returning 1..\n";
+               #print "tree_time_cmp $var was true!\n returning 1..\n";
                return 1;
             }
          }
@@ -175,6 +183,8 @@ sub tree_time_cmp {
 sub exec_cmd {
    my ($target) = @_;
    my $command = $commands{$target};
+   my $size = @$command;
+   print "size: $size\n";
    foreach my $var (@$command) {
       if (defined $var){
          print "Executing commands: \"$var\" under target: $target\n";
@@ -221,14 +231,14 @@ if ($length == 0) {
    interp_target $first_target;
 }
 elsif ($length == 1) {
-   print "1 arg detected\n";
+   #print "1 arg detected\n";
    my $input_target = $ARGV[0];
-   print "$input_target detected\n";
+   #print "$input_target detected\n";
    interp_target $input_target;
 }
 else {
-   print";;;;ERROR too many args;;;;;\n";
+   #print";;;;ERROR too many args;;;;;\n";
 }
-print "\$length = $length\n";
+#print "\$length = $length\n";
 my $print = $commands{"all"};
 print "@$print = targets commands\n";
