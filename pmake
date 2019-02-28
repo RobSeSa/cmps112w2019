@@ -45,6 +45,13 @@ my %strsignal = (
 # if flag d is set, $opt_d will be true
 getopts('d');
 
+my %deps;       # hash table to store target and dependencies
+my %commands;   # hash table to store target and commands
+my %macro;      # hash table to store macros
+my $target;     # keeps track of the target
+my $first_flag = 1;
+my $first_target;
+
 # parses a line of the given file
 # word before the colon is the target
 # word(s) after the colon are the dependencies
@@ -52,6 +59,7 @@ sub replace {
    my ($line) = @_;
    while ($line =~ m/^.*?\${(.*?)}.*$/) {
       my $replaced = $macro{$1};
+      #print "replacing $1 with $replaced\n";
       $line =~ s/\${$1}/$replaced/g;
    }
    return $line;
@@ -73,20 +81,24 @@ sub mtime($) {
    return @stat ? $stat[9] : undef;
 }
 
-sub getMacro ($) {
+#sub getMacro ($) {
+#   my ($line) = @_;
+#   $line =~ m/^(\S+)\s*=\s*(.*?)\s*$/;
+#   my ($var, $val) = ($1, $2);
+#   my @values = split m/\s+/, $val;
+#   return $var, \@values;
+#}
+sub getMacro {
    my ($line) = @_;
-   $line =~ m/^(\S+)\s*=\s*(.*?)\s*$/;
-   my ($var, $val) = ($1, $2);
-   my @values = split m/\s+/, $val;
-   return $var, \@values;
+   if ($line =~ m/^(\S+)\s*=\s*(.*?)\s*$/) {
+      return ($1, $2);
+   } else {
+      print "\"$line\" is not a macro\n\n";
+      return undef;
+   }
 }
 
-my %deps;       # hash table to store target and dependencies
-my %commands;   # hash table to store target and commands
-my %macro;      # hash table to store macros
-my $target;     # keeps track of the target
-my $first_flag = 1;
-my $first_target;
+
 
 # goes through the whole Makefile
 # uses function parse_dep to parse each line of the file
@@ -107,6 +119,7 @@ while (my $line = <FILE>) {
    # line contains macro
    } elsif ($line =~ m/^\S+\s*=\s*.*?\s*$/) {
       my ($var, $val) = getMacro $line;
+      #print "storing $val as val for $var macro\n";
       $macro{$var} = $val;
    # line contains command
    } elsif ($line =~ m/^\t(.*)\s*$/) {
@@ -216,7 +229,7 @@ sub interp_target {
    }
    else {
       if (! exists $deps{$mytarget}) {
-         print "$mytarget is not in deps table but in the directory\n";
+         #print "$mytarget is not in deps table but in the directory\n";
       }
       else {
          my $dependency = $deps{$mytarget};
@@ -230,14 +243,6 @@ sub interp_target {
          exec_cmd $mytarget;
       }
    }
-}
-
-sub interp_macro {
-   my ($line) = @_;
-   if ($line =~ m/^\${(.*?)}$/) {
-      return $macro{$1};
-   } else {
-      return 
 }
 
 my $length = @ARGV;
