@@ -175,7 +175,6 @@ sub exec_cmd {
    my ($target) = @_;
    #print "target = $target\n";
    my $command = $commands{$target};
-   my $size = @$command;
    #print "size: $size\n";
    foreach my $var (@$command) {
       if (defined $var){
