@@ -183,7 +183,7 @@ sub exec_cmd {
             system($1);
          }
          elsif ($var =~ m/^-\s*(.*?)\s*$/) {
-            print "$var\n";
+            print "$1\n";
             system($1);
          } else {
             print "$var\n";

@@ -45,6 +45,13 @@ my %strsignal = (
 # if flag d is set, $opt_d will be true
 getopts('d');
 
+my %deps;       # hash table to store target and dependencies
+my %commands;   # hash table to store target and commands
+my %macro;      # hash table to store macros
+my $target;     # keeps track of the target
+my $first_flag = 1;
+my $first_target;
+
 # parses a line of the given file
 # word before the colon is the target
 # word(s) after the colon are the dependencies
@@ -80,13 +87,6 @@ sub getMacro ($) {
    my @values = split m/\s+/, $val;
    return $var, \@values;
 }
-
-my %deps;       # hash table to store target and dependencies
-my %commands;   # hash table to store target and commands
-my %macro;      # hash table to store macros
-my $target;     # keeps track of the target
-my $first_flag = 1;
-my $first_target;
 
 # goes through the whole Makefile
 # uses function parse_dep to parse each line of the file
@@ -230,14 +230,6 @@ sub interp_target {
          exec_cmd $mytarget;
       }
    }
-}
-
-sub interp_macro {
-   my ($line) = @_;
-   if ($line =~ m/^\${(.*?)}$/) {
-      return $macro{$1};
-   } else {
-      return 
 }
 
 my $length = @ARGV;
