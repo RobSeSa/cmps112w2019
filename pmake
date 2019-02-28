@@ -59,7 +59,7 @@ sub replace {
    my ($line) = @_;
    while ($line =~ m/^.*?\${(.*?)}.*$/) {
       my $replaced = $macro{$1};
-      #print "replacing $1 with $replaced\n";
+      print "replacing $1 with $replaced\n" if ($OPTS{'d'});
       $line =~ s/\${$1}/$replaced/g;
    }
    return $line;
@@ -81,19 +81,12 @@ sub mtime($) {
    return @stat ? $stat[9] : undef;
 }
 
-#sub getMacro ($) {
-#   my ($line) = @_;
-#   $line =~ m/^(\S+)\s*=\s*(.*?)\s*$/;
-#   my ($var, $val) = ($1, $2);
-#   my @values = split m/\s+/, $val;
-#   return $var, \@values;
-#}
 sub getMacro {
    my ($line) = @_;
    if ($line =~ m/^(\S+)\s*=\s*(.*?)\s*$/) {
       return ($1, $2);
    } else {
-      print "\"$line\" is not a macro\n\n";
+      print "\"$line\" is not a macro\n\n" if ($OPTS{'d'});
       return undef;
    }
 }
@@ -139,35 +132,40 @@ while (my $line = <FILE>) {
 }
 close(FILE);
 
+if ($OPTS{'d'}) {
+   print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n
+          IN DEBUG MODE\n\n"
+}
+
 # compares given target with given dependency
 sub timeCompare ($$) {
    my ($mytarget, $var) = (@_);
    my $target_time = mtime $mytarget;
    if($target_time){
-      #print "$mytarget time = $target_time\n";
+      print "$mytarget time = $target_time\n" if ($OPTS{'d'});
    }
    #if target time not defined target is just a target and not a file
    #therefore all of its dependencies and commands should be executed
    else {
-      #print "$mytarget time is undefined\n";
+      print "$mytarget time is undefined\n" if ($OPTS{'d'});
       return 1;
    }
    my $var_time = mtime $var;
-   #print "var: $var\n";
-   #print "$var time = $var_time\n";
+   print "var: $var\n" if ($OPTS{'d'});
+   print "$var time = $var_time\n" if ($OPTS{'d'});
    if(! defined $var_time) {
       #print "$var does not exist\n";
       return 1;
    }
    else {
       my $difference = $var_time - $target_time;
-      #print "difference: $difference\n";
+      print "difference: $difference\n" if ($OPTS{'d'});
       if($difference > 0){
-         #print "$var needs to be compiled\n$var edited $difference after $mytarget\n";
+         print "$var needs to be compiled\n$var edited $difference after $mytarget\n" if ($OPTS{'d'});
          return 1;
       }
       else{
-         #print "no need to recompile $var as $var edited $difference after $mytarget\n";
+         print "no need to recompile $var as $var edited $difference after $mytarget\n" if ($OPTS{'d'});
          return 0;
       }
    }
@@ -177,7 +175,7 @@ sub timeCompare ($$) {
 sub tree_time_cmp {
    my ($mytarget) = @_;
    if (! exists $deps{$mytarget}) {
-      #print "\$deps{$mytarget} DNE returning 0..\n";
+      print "\$deps{$mytarget} DNE returning 0..\n" if ($OPTS{'d'});
       return 0;
    } else {
       my $dependency = $deps{$mytarget};
@@ -203,7 +201,7 @@ sub exec_cmd {
    #print "size: $size\n";
    foreach my $var (@$command) {
       if (defined $var){
-         #print "Executing commands: \"$var\" under target: $target\n";
+         print "Executing commands: \"$var\" under target: $target\n" if ($OPTS{'d'});
          if ($var =~ m/^@\s*(.*?)\s*$/) {
             system($1);
          }
@@ -259,3 +257,4 @@ else {
    #print";;;;ERROR too many args;;;;;\n";
 }
 #print "\$length = $length\n";
+
