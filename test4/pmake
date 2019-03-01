@@ -44,6 +44,10 @@ my %strsignal = (
 # sees if flag d is typed in command line
 # if flag d is set, $opt_d will be true
 getopts('d');
+if ($OPTS{'d'}) {
+   print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n
+          IN DEBUG MODE\n\n"
+}
 
 my %deps;       # hash table to store target and dependencies
 my %commands;   # hash table to store target and commands
@@ -52,19 +56,24 @@ my $target;     # keeps track of the target
 my $first_flag = 1;
 my $first_target;
 
-# parses a line of the given file
-# word before the colon is the target
-# word(s) after the colon are the dependencies
 sub replace {
    my ($line) = @_;
-   while ($line =~ m/^.*?\${(.*?)}.*$/) {
+   while ($line =~ m/^.*?\${(.*?)}.*$/ || $line =~ m/\$\$/) {
       my $replaced = $macro{$1};
       print "replacing $1 with $replaced\n" if ($OPTS{'d'});
-      $line =~ s/\${$1}/$replaced/g;
+      if ($line =~ m/^.*?\${(.*?)}.*$/) {
+         $line =~ s/\${$1}/$replaced/g;
+      }
+      else {
+         $line =~ s/\$\$/\$/g;
+      }
    }
    return $line;
 }
 
+# parses a line of the given file
+# word before the colon is the target
+# word(s) after the colon are the dependencies
 sub targetAndDep ($) {
    my ($line) = @_;
    return undef unless $line =~ m/^(\S+)\s*:\s*(.*?)\s*$/;
@@ -113,7 +122,6 @@ while (my $line = <FILE>) {
    # line contains macro
    } elsif ($line =~ m/^\S+\s*=\s*.*?\s*$/) {
       my ($var, $val) = getMacro $line;
-      #print "storing $val as val for $var macro\n";
       $macro{$var} = $val;
    # line contains command
    } elsif ($line =~ m/^\t(.*)\s*$/) {
@@ -121,22 +129,16 @@ while (my $line = <FILE>) {
          my $array = $commands{$target};
          my $replaced = replace $1;
          push (@$array, $replaced);
-         #print "pushing $1 into commands{$target}\n";
          $commands{$target} = $array;
       } else {
          my $replaced = replace $1;
          my @newArr = ($replaced);
          $commands{$target} = \@newArr;
-         #print "HHHHHHHELLLLLLOOOOO $target\n";
       }
    }
 }
 close(FILE);
 
-if ($OPTS{'d'}) {
-   print ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;\n
-          IN DEBUG MODE\n\n"
-}
 
 # compares given target with given dependency
 sub timeCompare ($$) {
@@ -155,6 +157,7 @@ sub timeCompare ($$) {
    print "var: $var\n" if ($OPTS{'d'});
    print "$var time = $var_time\n" if ($OPTS{'d'});
    if(! defined $var_time) {
+      #print "vartime = $var_time\n";
       #print "$var does not exist\n";
       return 1;
    }
@@ -195,16 +198,38 @@ sub tree_time_cmp {
    }
 }
 
+sub error_handle{
+   print "\$? = $?\n" if ($OPTS{'d'});
+   if ($? != 0) {
+      my $term_signal = $? & 0x7F;
+      my $core_dumped = $? & 0x80;
+      print "\nExiting core was dumped...\n" if ($core_dumped and $OPTS{'d'});
+      my $exit_status = ($? >> 8) & 0xFF;
+      print "Exit status = $exit_status\n" if ($OPTS{'d'});
+      if ($term_signal) {
+         my $signal = $strsignal{$term_signal};
+         print "\nTermination signal = $term_signal\n$signal...\n";
+      }
+      exit;
+   }
+}
+
 sub exec_cmd {
    my ($target) = @_;
    #print "target = $target\n";
    my $command = $commands{$target};
-   #print "size: $size\n";
    foreach my $var (@$command) {
       if (defined $var){
          print "Executing commands: \"$var\" under target: $target\n" if ($OPTS{'d'});
+         my $prereq = $deps{$target};
+         my @preArr = @$prereq;
+         my $first = $preArr[0];
+         print "first = $first\n" if ($OPTS{'d'});
+         $var =~ s/\$</$first/;
+         $var =~ s/\$@/$target/;
          if ($var =~ m/^@\s*(.*?)\s*$/) {
             system($1);
+            error_handle;
          }
          elsif ($var =~ m/^-\s*(.*?)\s*$/) {
             print "$1\n";
@@ -212,6 +237,7 @@ sub exec_cmd {
          } else {
             print "$var\n";
             system ($var);
+            error_handle;
          }
       }
       else {
@@ -219,27 +245,69 @@ sub exec_cmd {
       }
    }
 }
-
 sub interp_target {
    my ($mytarget) = @_;
    #print "interpreting $mytarget...\n";
    if ((! exists $deps{$mytarget}) && (! defined $mytarget))  {
-      print ";;;;;;;;;; ERROR ;;;;;;;;;;\n$mytarget not found in dep table or directory\n";
+      print ";;;;;;; ERROR;;;;;;;\n$mytarget not found in dep table or directory\n";
    }
    else {
-      if (! exists $deps{$mytarget}) {
-         #print "$mytarget is not in deps table but in the directory\n";
+      if (! exists $deps{$mytarget} || ! exists $commands{$mytarget}) {
+         # check to see if there is a wildcard that can execute the given target
+         $mytarget =~ m/^\s*(\w+?)(\.\w+?)$/;
+         my $name = $1;
+         my $type = $2;
+         my $suffix = undef;
+         # goes through the deps hash table to see if wildcard exists
+         foreach my $keys (keys %deps) {
+            if ($keys eq "\%$type") { 
+               $suffix = $keys;
+               last;
+            }
+         }
+         # if wildcard exists, interpret the target
+         if (defined $suffix) {
+            my $dependency = $deps{$suffix};
+            # put a number that is not 1 or 2 because timeCompare returns 1 or 2
+            # if firstTarget still equals 2 at the end, target's commands still needs to execute
+            my $firstTarget = 2;
+            # checks to see if the dependencies are up to date
+            # if they aren't, update them using interp_target
+            foreach my $var (@$dependency) {
+               $var =~ s/%/$name/;
+               $firstTarget = timeCompare ($mytarget, $var);
+               if ($firstTarget == 1) {
+                  interp_target ($var);
+               }
+            }
+            if ($firstTarget > 0) {
+               exec_cmd "%$type";
+            } else {
+               print "Nothing to do with $mytarget\n";
+            }
+         } else {
+            #print "wildcard doesn't exist for $mytarget\n"
+         }
       }
       else {
          my $dependency = $deps{$mytarget};
+         # put a number that is not 1 or 2 because timeCompare returns 1 or 2
+         # if firstTarget still equals 2 at the end, target's commands still needs to execute
+         my $firstTarget = 2;
          foreach my $var (@$dependency) {
-            if (timeCompare ($mytarget, $var)) {
+            $firstTarget = timeCompare ($mytarget, $var);
+            # print "first target = $firstTarget\n";dd
+            if ($firstTarget == 1) {
                #print "timeCompare ($mytarget, $var) = true\n";
                interp_target ($var);
             }
          }
          #print "executing_cmd on $mytarget\n";
-         exec_cmd $mytarget;
+         if ($firstTarget > 0) {
+            exec_cmd $mytarget;
+         } else {       # this one doesn't print all
+            print "Nothing to do with \"$mytarget\"\n";
+         }
       }
    }
 }
@@ -255,7 +323,5 @@ elsif ($length == 1) {
    interp_target $input_target;
 }
 else {
-   #print";;;;ERROR too many args;;;;;\n";
+   print";;;;ERROR too many args;;;;;\n";
 }
-#print "\$length = $length\n";
-
