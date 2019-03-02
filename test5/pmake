@@ -1,6 +1,6 @@
 #!/usr/bin/perl
-# Robert Sato (rssato)
-# Huanlei Wu (hwu43)
+# Robert Sato (rssato@ucsc.edu)
+# Huanlei Wu (hwu43@ucsc.edu)
 
 use strict;
 use warnings;
@@ -88,6 +88,7 @@ sub targetAndDep ($) {
    return $target, \@dependencies;
 }
 
+# checks for the modified time of a file
 sub mtime($) {
    my ($filename) = @_;
    return undef unless defined $filename;
@@ -95,18 +96,14 @@ sub mtime($) {
    return @stat ? $stat[9] : undef;
 }
 
+# separates the macro variable from its values
 sub getMacro {
    my ($line) = @_;
    if ($line =~ m/^(\S+)\s*=\s*(.*?)\s*$/) {
       my $replaced = replace $2;
       return ($1, $replaced);
-   } else {
-      print "\"$line\" is not a macro\n\n" if ($OPTS{'d'});
-      return undef;
    }
 }
-
-
 
 # goes through the whole Makefile
 # uses function parse_dep to parse each line of the file
@@ -161,19 +158,19 @@ sub timeCompare ($$) {
    print "var: $var\n" if ($OPTS{'d'});
    print "$var time = $var_time\n" if ($OPTS{'d'});
    if(! defined $var_time) {
-      #print "vartime = $var_time\n";
-      #print "$var does not exist\n";
       return 1;
    }
    else {
       my $difference = $var_time - $target_time;
       print "difference: $difference\n" if ($OPTS{'d'});
       if($difference > 0){
-         print "$var needs to be compiled\n$var edited $difference after $mytarget\n" if ($OPTS{'d'});
+         print "$var needs to be compiled\n$var edited 
+                $difference after $mytarget\n" if ($OPTS{'d'});
          return 1;
       }
       else{
-         print "no need to recompile $var as $var edited $difference after $mytarget\n" if ($OPTS{'d'});
+         print "no need to recompile $var as $var edited 
+                $difference after $mytarget\n" if ($OPTS{'d'});
          return 0;
       }
    }
@@ -191,9 +188,7 @@ sub tree_time_cmp {
          if (timeCompare ($mytarget, $var)) {
             return 1;
          } else {
-            #print "\$var = $var\n";
             if (tree_time_cmp ($var)) {
-               #print "tree_time_cmp $var was true!\n returning 1..\n";
                return 1;
             }
          }
@@ -202,22 +197,27 @@ sub tree_time_cmp {
    }
 }
 
+# handles the error messages; looks at termination signal;
+# core dump, and exit status
 sub error_handle{
    print "\$? = $?\n" if ($OPTS{'d'});
    if ($? != 0) {
       my $term_signal = $? & 0x7F;
       my $core_dumped = $? & 0x80;
-      print "\nExiting core was dumped...\n" if ($core_dumped and $OPTS{'d'});
+      print "\nExiting core was dumped...\n" 
+            if ($core_dumped and $OPTS{'d'});
       my $exit_status = ($? >> 8) & 0xFF;
       print "Exit status = $exit_status\n" if ($OPTS{'d'});
       if ($term_signal) {
          my $signal = $strsignal{$term_signal};
-         print "\nTermination signal = $term_signal\n$signal...\n" if (defined $signal and $OPTS{'d'});
+         print "\nTermination signal = $term_signal\n$signal...\n" 
+               if (defined $signal and $OPTS{'d'});
       }
       exit;
    }
 }
 
+# executes the commands using system() function
 sub exec_cmd {
    my ($target) = @_;
    my $name;
@@ -232,7 +232,8 @@ sub exec_cmd {
    foreach my $var (@$command) {
       if (defined $var) {
          my $replace = $var;
-         print "Executing commands: \"$var\" under target: $target\n" if ($OPTS{'d'});
+         print "Executing commands: \"$var\" under target: $target\n" 
+               if ($OPTS{'d'});
          my $prereq = $deps{$target};
          my @preArr = @$prereq;
          my $first = $preArr[0];
@@ -245,10 +246,12 @@ sub exec_cmd {
             $replace =~ s/\$</$first/;
             $replace =~ s/\$@/$target/;
          }
+         # don't print out command
          if ($replace =~ m/^@\s*(.*?)\s*$/) {
             system($1);
             error_handle;
          }
+         # don't quit program if line has error
          elsif ($replace =~ m/^-\s*(.*?)\s*$/) {
             print "$1\n";
             system($1);
@@ -258,27 +261,29 @@ sub exec_cmd {
             error_handle;
          }
       }
-      else {
-         #print "$target has no commands\n";
-      }
    }
 }
 
+# goes through the target's dependencies and updates files as needed
 sub interp_target {
    my ($mytarget) = @_;
    #print "interpreting $mytarget...\n";
-   if ((! exists $deps{$mytarget}) && ($wildTarget == 0) && (! defined $mytarget))  {
+   if ((! exists $deps{$mytarget}) && ($wildTarget == 0) 
+       && (! defined $mytarget)) {
       print "no rule to make \'$mytarget\'. STOP.\n";
    }
    else {
-      if (! exists $deps{$mytarget} || (! exists $commands{$mytarget} && $mytarget ne 'all')) {
-         # check to see if there is a wildcard that can execute the given target
-         #print "mytarget (interp) = $mytarget\n";
+      if (! exists $deps{$mytarget} || (! exists $commands{$mytarget}
+          && $mytarget ne 'all')) {
+         # check to see if there is a wildcard that can execute the 
+         # given target
+         # print "mytarget (interp) = $mytarget\n";
          if ($mytarget =~ m/^\s*(\w+?)(\.\w+?)$/) {
             my $name = $1;
             my $type = $2;
             my $suffix = undef;
-            # goes through the deps hash table to see if wildcard exists
+            # goes through the deps hash table to see if 
+            # wildcard exists
             foreach my $keys (keys %deps) {
                if ($keys eq "\%$type") { 
                   $suffix = $keys;
@@ -288,13 +293,16 @@ sub interp_target {
             # if wildcard exists, interpret the target
             if (defined $suffix) {
                my $dependency = $deps{$suffix};
-               # put a number that is not 1 or 2 because timeCompare returns 1 or 0
-               # if firstTarget still equals 2 at the end, target's commands still needs to execute
+               # put a number that is not 1 or 2 because timeCompare 
+               # returns 1 or 0
+               # if firstTarget still equals 2 at the end, target's 
+               # commands still needs to execute
                my $firstTarget = 2;
                # checks to see if the dependencies are up to date
                # if they aren't, update them using interp_target
                foreach my $var (@$dependency) {
-                  my $change = $var;            # set change to var to not change hash value
+                  # set change to var to not change hash value
+                  my $change = $var;
                   my $sufWithoutPer = $change;
                   $sufWithoutPer =~ s/\%//;
                   if (! -e "$name$sufWithoutPer") {
@@ -322,8 +330,10 @@ sub interp_target {
       }
       else {
          my $dependency = $deps{$mytarget};
-         # put a number that is not 1 or 2 because timeCompare returns 1 or 2
-         # if firstTarget still equals 2 at the end, target's commands still needs to execute
+         # put a number that is not 1 or 2 because timeCompare 
+         # returns 1 or 2
+         # if firstTarget still equals 2 at the end, target's 
+         # commands still needs to execute
          my $firstTarget = 2;
          foreach my $var (@$dependency) {
             $firstTarget = timeCompare ($mytarget, $var);
@@ -347,9 +357,7 @@ if ($length == 0) {
    interp_target $first_target;
 }
 elsif ($length == 1) {
-   #print "1 arg detected\n";
    my $input_target = $ARGV[0];
-   #print "$input_target detected\n";
    interp_target $input_target;
 }
 else {
