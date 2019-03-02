@@ -56,6 +56,7 @@ my $target;              # keeps track of the target
 my $first_flag = 1;      # flag that sees 
 my $first_target;        # keeps track of the very first target
 my $wildcard = 0;        # sees if command is a wildcard
+my $wildTarget = 0;      # sees if a wildcard exists
 
 sub replace {
    my ($line) = @_;
@@ -80,6 +81,9 @@ sub targetAndDep ($) {
    return undef unless $line =~ m/^(\S+)\s*:\s*(.*?)\s*$/;
    my $target = replace $1;
    my $dependency = replace $2;
+   if ($target =~ m/^\%.*$/) {
+      $wildTarget = 1;
+   }
    my @dependencies = split m/\s+/, $dependency;
    return $target, \@dependencies;
 }
@@ -139,11 +143,6 @@ while (my $line = <FILE>) {
    }
 }
 close(FILE);
-
-#my $address = $deps{"%.o"};
-#my @c = @$address;
-#my $first = $c[0];
-#print "should be %.c ==== $first\n";
 
 # compares given target with given dependency
 sub timeCompare ($$) {
@@ -268,8 +267,8 @@ sub exec_cmd {
 sub interp_target {
    my ($mytarget) = @_;
    #print "interpreting $mytarget...\n";
-   if ((! exists $deps{$mytarget}) && (! defined $mytarget))  {
-      print ";;;;;;; ERROR;;;;;;;\n$mytarget not found in dep table or directory\n";
+   if ((! exists $deps{$mytarget}) && ($wildTarget == 0))  {
+      print "no rule to make \'$mytarget\'. STOP.\n";
    }
    else {
       if (! exists $deps{$mytarget} || (! exists $commands{$mytarget} && $mytarget ne 'all')) {
@@ -289,17 +288,24 @@ sub interp_target {
             # if wildcard exists, interpret the target
             if (defined $suffix) {
                my $dependency = $deps{$suffix};
-               # put a number that is not 1 or 2 because timeCompare returns 1 or 2
+               # put a number that is not 1 or 2 because timeCompare returns 1 or 0
                # if firstTarget still equals 2 at the end, target's commands still needs to execute
                my $firstTarget = 2;
                # checks to see if the dependencies are up to date
                # if they aren't, update them using interp_target
                foreach my $var (@$dependency) {
                   my $change = $var;            # set change to var to not change hash value
-                  $change =~ s/%/$name/;
-                  $firstTarget = timeCompare ($mytarget, $change);
-                  if ($firstTarget == 1) {
-                     interp_target ($change);
+                  my $sufWithoutPer = $change;
+                  $sufWithoutPer =~ s/\%//;
+                  if (! -e "$name$sufWithoutPer") {
+                     print "no rule to make \'$mytarget\'. Stop.\n";
+                     exit;
+                  } else {
+                     $change =~ s/%/$name/;
+                     $firstTarget = timeCompare ($mytarget, $change);
+                     if ($firstTarget == 1) {
+                        interp_target ($change);
+                     }
                   }
                }
                if ($firstTarget > 0) {
@@ -311,7 +317,7 @@ sub interp_target {
                }
             }
          } else {
-            #print "wildcard doesn't exist for $mytarget\n"
+            print "wildcard doesn't exist for $mytarget\n"
          }
       }
       else {

@@ -274,7 +274,7 @@ sub interp_target {
    else {
       if (! exists $deps{$mytarget} || (! exists $commands{$mytarget} && $mytarget ne 'all')) {
          # check to see if there is a wildcard that can execute the given target
-         #print "mytarget (interp) = $mytarget\n";
+         print "mytarget (interp) = $mytarget\n";
          if ($mytarget =~ m/^\s*(\w+?)(\.\w+?)$/) {
             my $name = $1;
             my $type = $2;
