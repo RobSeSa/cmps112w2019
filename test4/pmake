@@ -212,7 +212,7 @@ sub error_handle{
       print "Exit status = $exit_status\n" if ($OPTS{'d'});
       if ($term_signal) {
          my $signal = $strsignal{$term_signal};
-         print "\nTermination signal = $term_signal\n$signal...\n";
+         print "\nTermination signal = $term_signal\n$signal...\n" if (defined $signal and $OPTS{'d'});
       }
       exit;
    }
@@ -267,7 +267,7 @@ sub exec_cmd {
 sub interp_target {
    my ($mytarget) = @_;
    #print "interpreting $mytarget...\n";
-   if ((! exists $deps{$mytarget}) && ($wildTarget == 0))  {
+   if ((! exists $deps{$mytarget}) && ($wildTarget == 0) && (! defined $mytarget))  {
       print "no rule to make \'$mytarget\'. STOP.\n";
    }
    else {
@@ -317,7 +317,7 @@ sub interp_target {
                }
             }
          } else {
-            print "wildcard doesn't exist for $mytarget\n"
+            print "no rule to make \'$mytarget\'. STOP.\n";
          }
       }
       else {

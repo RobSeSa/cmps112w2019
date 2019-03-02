@@ -3,7 +3,7 @@
 # Note: "echo all" is echoed, but echo of "foo" and "bar" are not.
 
 all : foo bar
-	echo all - command '*IS*' echoed ; echo hi
+	echo all - command '*IS*' echoed
 
 foo :
 	@ echo foo - command not echoed

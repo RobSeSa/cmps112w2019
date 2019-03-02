@@ -30,3 +30,4 @@ spotless : clean
 
 hello.o: hello.c hello.h
 main.o: main.c hello.h
+

@@ -3,7 +3,7 @@
 hello : hello.c
 	gcc hello.c -o hello
 
-bad : bad.c 
+bad : bad.c
 	gcc bad.c -o bad
 
 ci : Makefile hello.c bad.c

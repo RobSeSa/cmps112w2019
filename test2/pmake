@@ -49,19 +49,21 @@ if ($OPTS{'d'}) {
           IN DEBUG MODE\n\n"
 }
 
-my %deps;       # hash table to store target and dependencies
-my %commands;   # hash table to store target and commands
-my %macro;      # hash table to store macros
-my $target;     # keeps track of the target
-my $first_flag = 1;
-my $first_target;
+my %deps;                # hash table to store target and dependencies
+my %commands;            # hash table to store target and commands
+my %macro;               # hash table to store macros
+my $target;              # keeps track of the target
+my $first_flag = 1;      # flag that sees 
+my $first_target;        # keeps track of the very first target
+my $wildcard = 0;        # sees if command is a wildcard
+my $wildTarget = 0;      # sees if a wildcard exists
 
 sub replace {
    my ($line) = @_;
-   while ($line =~ m/^.*?\${(.*?)}.*$/ || $line =~ m/\$\$/) {
-      my $replaced = $macro{$1};
-      print "replacing $1 with $replaced\n" if ($OPTS{'d'});
+   while ($line =~ m/^.*?\${.*?}.*$/ || $line =~ m/\$\$/) {
       if ($line =~ m/^.*?\${(.*?)}.*$/) {
+         my $replaced = $macro{$1};
+         print "replacing $1 with $replaced\n" if ($OPTS{'d'});
          $line =~ s/\${$1}/$replaced/g;
       }
       else {
@@ -79,6 +81,9 @@ sub targetAndDep ($) {
    return undef unless $line =~ m/^(\S+)\s*:\s*(.*?)\s*$/;
    my $target = replace $1;
    my $dependency = replace $2;
+   if ($target =~ m/^\%.*$/) {
+      $wildTarget = 1;
+   }
    my @dependencies = split m/\s+/, $dependency;
    return $target, \@dependencies;
 }
@@ -109,7 +114,7 @@ open(FILE, 'Makefile') || die("Could not open Makefile\n");
 while (my $line = <FILE>) {
    my $deps;
    # line is a comment
-   if ($line =~ m/^#.*$/) {
+   if ($line =~ m/^\s*#.*$/) {
       # do nothing
    # line contains a target and dependencies
    } elsif ($line =~ m/^\S+\s*:\s*.*?\s*$/) {
@@ -138,7 +143,6 @@ while (my $line = <FILE>) {
    }
 }
 close(FILE);
-
 
 # compares given target with given dependency
 sub timeCompare ($$) {
@@ -208,7 +212,7 @@ sub error_handle{
       print "Exit status = $exit_status\n" if ($OPTS{'d'});
       if ($term_signal) {
          my $signal = $strsignal{$term_signal};
-         print "\nTermination signal = $term_signal\n$signal...\n";
+         print "\nTermination signal = $term_signal\n$signal...\n" if (defined $signal and $OPTS{'d'});
       }
       exit;
    }
@@ -216,27 +220,41 @@ sub error_handle{
 
 sub exec_cmd {
    my ($target) = @_;
-   #print "target = $target\n";
+   my $name;
+   my $targetNoPercent;
+   if ($wildcard) {
+      $target =~ m/^(\w+?)(\.\w+?)$/;
+      $name = $1;
+      $target = "%$2";
+      $targetNoPercent = $2;
+   }
    my $command = $commands{$target};
    foreach my $var (@$command) {
-      if (defined $var){
+      if (defined $var) {
+         my $replace = $var;
          print "Executing commands: \"$var\" under target: $target\n" if ($OPTS{'d'});
          my $prereq = $deps{$target};
          my @preArr = @$prereq;
          my $first = $preArr[0];
          print "first = $first\n" if ($OPTS{'d'});
-         $var =~ s/\$</$first/;
-         $var =~ s/\$@/$target/;
-         if ($var =~ m/^@\s*(.*?)\s*$/) {
+         if ($wildcard) {
+            $first =~ s/%/$name/;
+            $replace =~ s/\$</$first/;
+            $replace =~ s/\$@/$name$targetNoPercent/;
+         } else {
+            $replace =~ s/\$</$first/;
+            $replace =~ s/\$@/$target/;
+         }
+         if ($replace =~ m/^@\s*(.*?)\s*$/) {
             system($1);
             error_handle;
          }
-         elsif ($var =~ m/^-\s*(.*?)\s*$/) {
+         elsif ($replace =~ m/^-\s*(.*?)\s*$/) {
             print "$1\n";
             system($1);
          } else {
-            print "$var\n";
-            system ($var);
+            print "$replace\n";
+            system ($replace);
             error_handle;
          }
       }
@@ -245,46 +263,61 @@ sub exec_cmd {
       }
    }
 }
+
 sub interp_target {
    my ($mytarget) = @_;
    #print "interpreting $mytarget...\n";
-   if ((! exists $deps{$mytarget}) && (! defined $mytarget))  {
-      print ";;;;;;; ERROR;;;;;;;\n$mytarget not found in dep table or directory\n";
+   if ((! exists $deps{$mytarget}) && ($wildTarget == 0) && (! defined $mytarget))  {
+      print "no rule to make \'$mytarget\'. STOP.\n";
    }
    else {
-      if (! exists $deps{$mytarget}) {
+      if (! exists $deps{$mytarget} || (! exists $commands{$mytarget} && $mytarget ne 'all')) {
          # check to see if there is a wildcard that can execute the given target
-         my $mytarget =~ m/^\s*(\w+?)(\.w+?)$/;
-         my $suffix = undef;
-         # goes through the deps hash table to see if wildcard exists
-         foreach my $keys (keys %graph) {
-            if ($keys eq "%$2") { 
-               $suffix = $keys;
-               last;
-            }
-         }
-         # if wildcard exists, interpret the target
-         if (defined $suffix) {
-            my $dependency = $deps{$suffix};
-            # put a number that is not 1 or 2 because timeCompare returns 1 or 2
-            # if firstTarget still equals 2 at the end, target's commands still needs to execute
-            my $firstTarget = 2;
-            # checks to see if the dependencies are up to date
-            # if they aren't, update them using interp_target
-            foreach my $var (@$dependency) {
-               $var =~ s/%/$1/;
-               $firstTarget = timeCompare ($mytarget, $var);
-               if ($firstTarget == 1) {
-                  interp_target ($var);
+         #print "mytarget (interp) = $mytarget\n";
+         if ($mytarget =~ m/^\s*(\w+?)(\.\w+?)$/) {
+            my $name = $1;
+            my $type = $2;
+            my $suffix = undef;
+            # goes through the deps hash table to see if wildcard exists
+            foreach my $keys (keys %deps) {
+               if ($keys eq "\%$type") { 
+                  $suffix = $keys;
+                  last;
                }
             }
-            if ($firstTarget > 0) {
-               exec_cmd "%$2";
-            } else {
-               print "Nothing to do with $mytarget\n";
+            # if wildcard exists, interpret the target
+            if (defined $suffix) {
+               my $dependency = $deps{$suffix};
+               # put a number that is not 1 or 2 because timeCompare returns 1 or 0
+               # if firstTarget still equals 2 at the end, target's commands still needs to execute
+               my $firstTarget = 2;
+               # checks to see if the dependencies are up to date
+               # if they aren't, update them using interp_target
+               foreach my $var (@$dependency) {
+                  my $change = $var;            # set change to var to not change hash value
+                  my $sufWithoutPer = $change;
+                  $sufWithoutPer =~ s/\%//;
+                  if (! -e "$name$sufWithoutPer") {
+                     print "no rule to make \'$mytarget\'. Stop.\n";
+                     exit;
+                  } else {
+                     $change =~ s/%/$name/;
+                     $firstTarget = timeCompare ($mytarget, $change);
+                     if ($firstTarget == 1) {
+                        interp_target ($change);
+                     }
+                  }
+               }
+               if ($firstTarget > 0) {
+                  $wildcard = 1;
+                  exec_cmd "$mytarget";
+                  $wildcard = 0;
+               } else {
+                  print "Nothing to do with $mytarget\n";
+               }
             }
          } else {
-            print "wildcard doesn't exist for $mytarget\n"
+            print "no rule to make \'$mytarget\'. STOP.\n";
          }
       }
       else {
@@ -294,7 +327,6 @@ sub interp_target {
          my $firstTarget = 2;
          foreach my $var (@$dependency) {
             $firstTarget = timeCompare ($mytarget, $var);
-            # print "first target = $firstTarget\n";dd
             if ($firstTarget == 1) {
                #print "timeCompare ($mytarget, $var) = true\n";
                interp_target ($var);
@@ -313,7 +345,6 @@ sub interp_target {
 my $length = @ARGV;
 if ($length == 0) {
    interp_target $first_target;
-   print "first target = $first_target\n";
 }
 elsif ($length == 1) {
    #print "1 arg detected\n";
