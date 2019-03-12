@@ -7,33 +7,81 @@ not( _ ).
 fly( From, To ) :-
    isFlight( From, To, [From] ).
 
-% sees if there is a viable path
+%if flight( From -> To ) true
 isFlight( From, To , Tried ) :-
+   write('Checking for direct flight from '), 
+   write( From ), write(' to '), write( To ), nl,
    flight( From, To, _ ),
    append( Tried, [To], Path ), 
    printSched( Path ).
-   %nl, write( From ), write(' '), write( To ).
 
-isFlight( From, To , Tried ) :-
-   not( member( To, Tried ) ),
-   write( '1' ), nl,
-   flight( From, Layover, _ ), 
-   write( '2' ), nl,
-   not( member( Layover, Tried ) ),
-   write( '3' ), nl,
-   time( From, To, ArriveTime ),
-   write( '4' ), nl,
-   minutes( From, Layover, FromMin ),
-   write( '5' ), write(Layover), write( ' ' ), write(To), nl,
-   minutes( Layover, To, ToMin ),
-   write( '6' ), nl,
-   FinalMin is FromMin + ArriveTime + 30,
-   write( '7' ), nl,
-   write( FinalMin ), write( ' ' ), write( ToMin ),
-   write( '8' ), nl,
-   ToMin >= FinalMin,
-   isFlight( Layover, To, [Layover|Tried] ).
-   %nl, write( From ), write(' '), write( Layover ).
+%elseif flight( From -> Temp1 -> To ) true
+isFlight( From, To, Tried) :-
+   nl, write('Start testing for From -> temp1 -> To.. '), nl,
+   flight( From, Temp1, _),
+   write('From = '), write(From), 
+   write('; Temp1 = '), write(Temp1),
+   write('; To = '), write(To), 
+   write('; Tried = '), write(Tried), nl,
+   not( member( Temp1, Tried ) ),
+   write('flight temp1 temp2..'), nl,
+   flight( Temp1, Temp2, _),
+   write('From = '), write(From), 
+   write('; Temp1 = '), write(Temp1),
+   write('; Temp2 = '), write(Temp2),
+   write('; To = '), write(To), 
+   write('; Tried = '), write(Tried), nl,
+   write('Checking if '), write(Temp2),
+   write(' not a member of tried.. '),nl,
+   not( member( Temp2, Tried ) ),
+   write('Checking the time..'), nl,
+   checkTime( From, Temp1, Temp2 ),
+   write('Comparing Temp2 and To'), nl,
+   Temp2 = To,
+   write('Flight exists with one layover.. '), nl,
+   write('append1.. '), nl,
+   append( Tried, [Temp1], Path ), 
+   write('append2.. '), nl,
+   append( Path, [To], Final ), 
+   write('printSched.. '), nl,
+   printSched( Final ).
+
+%else
+isFlight( From, To, Tried) :-
+   nl, write('Start testing in else clause.. '), nl,
+   flight( From, Temp1, _),
+   write('From = '), write(From), 
+   write('; Temp1 = '), write(Temp1),
+   write('; To = '), write(To), 
+   write('; Tried = '), write(Tried), nl,
+   not( member( Temp1, Tried ) ),
+   flight( Temp1, Temp2, _),
+   write('From = '), write(From), 
+   write('; Temp1 = '), write(Temp1),
+   write('; Temp2 = '), write(Temp2),
+   write('; To = '), write(To), 
+   write('; Tried = '), write(Tried), nl,
+   not( member( Temp2, Tried ) ),
+   write('Checking the time..'), nl,
+   checkTime( From, Temp1, Temp2 ),
+   append( Tried, [Temp1], Path ), 
+   append( Path, [Temp2], Final ), 
+   write('Adding two layovers..'), nl, nl,
+   isFlight( Temp2, To, Final ).
+
+%checks if the flight From to Layover makes it before Layover to To
+checkTime( From, Layover, To ) :-
+   minutes( From, Layover, MinA ),
+   time( From, To, TripA ),
+   minutes( Layover, To, MinB ),
+   AToB is MinA + TripA + 30,
+   write('Comparing flight '), write(Layover),
+   write(' to '), write(To), 
+   write(' departure time: '), write(MinB),
+   write(' with '), write(From),
+   write(' to '), write(Layover), 
+   write(' departure + flight + 30: '), write(AToB), nl,
+   MinB >= AToB.
 
 minutes( From, To, Minutes ) :-
    flight( From, To, time( Hour, Min ) ),
@@ -67,8 +115,8 @@ time( From, To, Time ) :-
    %write( Time ), nl.
 
 printSched( [Head] ) :-
-   write( Head ).
+   write( Head ), nl.
 
 printSched( [Head|Tail] ) :-
-   nl, write( Head ), nl,
+   write( Head ), write(' -> '),
    printSched( Tail ).
