@@ -27,17 +27,18 @@ isFlight( From, To, Tried, Flights ) :-
    not( member( To, Tried ) ),
    pop( Tried, Head ),
    Head \= From,
-   flight( From, Layover, _ ),
-   write('To '), write(To), nl,
-   write('From '), write(From), nl,
-   write('Layover '), write(Layover), nl,
+   flight( From, Layover, _ ), !,
+   %write('To '), write(To), nl,
+   %write('From '), write(From), nl,
+   %write('Layover '), write(Layover), nl,
+   %write(Tried), nl, !,
    not( member( Layover, Tried ) ),
    pop2( Flights, PrevFlight ),
-   write('PreFlight '), write(PrevFlight), nl,
-   write(Tried),nl, !,
+   %write('PreFlight '), write(PrevFlight), nl,
+   %write(Tried),nl,
    checkTime( PrevFlight, From, Layover ),
    append( Tried, [Layover], Path ),
-   write(Path), nl,
+   %write(Path), nl,
    isFlight( Layover, To, Path, [Layover|Flights] ).
 
 % there is a layover in the flight
@@ -48,20 +49,20 @@ isFlight( From, To, Tried, Flights ) :-
    append( Tried, [Layover], Path ),
    %write('To '), write(To), nl,
    %write('From '), write(From), nl,
-   write('Layover init '), write(Layover), nl,
+   %write('Layover init '), write(Layover), nl,
    %write(Path), nl,
    isFlight( Layover, To, Path , [Layover|Flights]).
 
 % checks if the flight From to Layover makes it before Layover to To
 checkTime( From, Layover, To ) :-
    minutes( From, Layover, DepartTimeA ),
-   write( From ), write(' to '), write(Layover), write(' is at '), write(DepartTimeA), nl,
+   %write( From ), write(' to '), write(Layover), write(' is at '), write(DepartTimeA), nl,
    time( From, Layover, TripDuration ),
-   write('takes this long: '), write(TripDuration), nl,
+   %write('takes this long: '), write(TripDuration), nl,
    minutes( Layover, To, DepartTimeB ),
-   write( Layover ), write(' to '), write(To), write(' is at '), write(DepartTimeB), nl,
+   %write( Layover ), write(' to '), write(To), write(' is at '), write(DepartTimeB), nl,
    AToB is DepartTimeA + TripDuration + 30,
-   write(AToB), nl,
+   %write(AToB), nl,
    AToB =< DepartTimeB.
 
 % converts hours and minutes to minutes
