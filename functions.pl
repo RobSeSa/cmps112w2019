@@ -4,6 +4,7 @@
 not( X ) :- X, !, fail.
 not( _ ).
 
+
 fly( From, To ) :-
    isFlight( From, To, [From] ).
 
@@ -13,7 +14,7 @@ isFlight( From, To , Tried ) :-
    write( From ), write(' to '), write( To ), nl,
    flight( From, To, _ ),
    append( Tried, [To], Path ), 
-   printSched( Path ).
+   printSched( Path , 0).
 
 %elseif flight( From -> Temp1 -> To ) true
 isFlight( From, To, Tried) :-
@@ -44,7 +45,7 @@ isFlight( From, To, Tried) :-
    write('append2.. '), nl,
    append( Path, [To], Final ), 
    write('printSched.. '), nl,
-   printSched( Final ).
+   printSched( Final , 0).
 
 %else
 isFlight( From, To, Tried) :-
@@ -72,7 +73,7 @@ isFlight( From, To, Tried) :-
 %checks if the flight From to Layover makes it before Layover to To
 checkTime( From, Layover, To ) :-
    minutes( From, Layover, MinA ),
-   time( From, To, TripA ),
+   time( From, Layover, TripA ),
    minutes( Layover, To, MinB ),
    AToB is MinA + TripA + 30,
    write('Comparing flight '), write(Layover),
@@ -83,9 +84,16 @@ checkTime( From, Layover, To ) :-
    write(' departure + flight + 30: '), write(AToB), nl,
    MinB >= AToB.
 
+%grabs time converted to minutes
 minutes( From, To, Minutes ) :-
    flight( From, To, time( Hour, Min ) ),
    Minutes is Hour * 60 + Min.
+
+%grabs hours and minutes
+hoursMins( From, To, Hours, Minutes ) :-
+   flight( From, To, time( Hour, Min ) ),
+   Hours is Hour,
+   Minutes is Min.
 
 % calculates the radians
 radians( From, To , Distance) :-
@@ -114,9 +122,60 @@ time( From, To, Time ) :-
    Time is round( Hours * 60 ).
    %write( Time ), nl.
 
+convertTime( Minutes, HoursO, MinsO ) :-
+   HoursO is Minutes div 60,
+   MinsO is Minutes mod 60.
+
+to_upper( Lower, Upper) :-
+   atom_chars( Lower, Lowerlist),
+   maplist( lower_upper, Lowerlist, Upperlist),
+   atom_chars( Upper, Upperlist).
+
+print_trip( Action, Code, Name, time( Hour, Minute)) :-
+   to_upper( Code, Upper_code),
+   format( "%-6s  %3s  %-16s  %02d:%02d",
+           [Action, Upper_code, Name, Hour, Minute]),
+   nl.
+
+pop( [Head|_], Value ) :-
+   Value = Head.
+
+addTime(Hours, Minutes, Total) :-
+   Total is Hours * 60 + Minutes.
+
+
+printSched( [Head], _ ) :-
+   write(Head), nl.
+
+printSched( [Dep|Tail] , Current) :-
+   pop( Tail, Arr ),
+   airport( Dep, DepName, _, _ ),
+   hoursMins( Dep, Arr, HourD, MinsD ),
+   addTime(HourD, MinsD, DepMins),
+   Current =< DepMins,
+
+   airport( Arr, ArrName, _, _ ),
+   minutes( Dep, Arr, MinA ),
+   Current =< MinA,
+
+   time( Dep, Arr , TripA ),
+   ArrTime is MinA + TripA,
+   TimeCurr is ArrTime + 30,
+   convertTime( ArrTime, ArrHours, ArrMins ),
+   print_trip( depart, Dep, DepName, time( HourD, MinsD)),
+   print_trip( arrive, Arr, ArrName, time( ArrHours, ArrMins)),
+   printSched( Tail, TimeCurr ).
+
+
+/*
+test :-
+   print_trip( depart, nyc, 'New York City', time( 9, 3)),
+   print_trip( arrive, lax, 'Los Angeles', time( 14, 22)).
+
 printSched( [Head] ) :-
    write( Head ), nl.
 
 printSched( [Head|Tail] ) :-
    write( Head ), write(' -> '),
    printSched( Tail ).
+*/
