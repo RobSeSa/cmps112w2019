@@ -14,20 +14,26 @@ pop2( [_|Tail], Value ) :-
 
 % sees if there is a viable Path
 fly( From, To ) :-
-   isFlight( From, To, [From], [From] ).
+   write('Searching for a path from '), write(From),
+   write(' to '), write(To), nl,
+   isFlight( From, To, [From], [From], 0 ).
 
 % if flight( From -> To ) true
-isFlight( From, To, Tried, _ ) :-
-   flight( From, To, _ ),
+isFlight( From, To, Tried, _, Current ) :-
+   flight( From, To, time( Hour, Min ) ),
+   getMinutes( Hour, Min, Time ),
+   Time >= Current,
    append( Tried, [To], Path ), 
    nl, printSched( Path , 0).
 
 % there is a layover in the flight
-isFlight( From, To, Tried, Flights ) :-
+isFlight( From, To, Tried, Flights, Current ) :-
    not( member( To, Tried ) ),
    pop( Tried, Head ),
    Head \= From,
-   flight( From, Layover, _ ), !,
+   flight( From, Layover, time( Hour, Min) ), !,
+   getMinutes( Hour, Min, Time ),
+   Time >= Current,
    %write('To '), write(To), nl,
    %write('From '), write(From), nl,
    %write('Layover '), write(Layover), nl,
@@ -39,19 +45,25 @@ isFlight( From, To, Tried, Flights ) :-
    checkTime( PrevFlight, From, Layover ),
    append( Tried, [Layover], Path ),
    %write(Path), nl,
-   isFlight( Layover, To, Path, [Layover|Flights] ).
+   time( From, Layover, Duration ),
+   CurrentNow is Current + 30 + Duration,
+   isFlight( Layover, To, Path, [Layover|Flights], CurrentNow ).
 
 % there is a layover in the flight
 % setting up for the next isFlight expression
-isFlight( From, To, Tried, Flights ) :-
+isFlight( From, To, Tried, Flights , Current ) :-
    not( member( To, Tried ) ),
-   flight( From, Layover, _ ),
+   flight( From, Layover, time( Hour, Min ) ),
+   getMinutes( Hour, Min, Time ),
+   Time >= Current,
    append( Tried, [Layover], Path ),
    %write('To '), write(To), nl,
    %write('From '), write(From), nl,
    %write('Layover init '), write(Layover), nl,
    %write(Path), nl,
-   isFlight( Layover, To, Path , [Layover|Flights]).
+   time( From, Layover, Duration ),
+   CurrentNow is Current + 30 + Duration,
+   isFlight( Layover, To, Path, [Layover|Flights], CurrentNow ).
 
 % checks if the flight From to Layover makes it before Layover to To
 checkTime( From, Layover, To ) :-
@@ -69,6 +81,9 @@ checkTime( From, Layover, To ) :-
 minutes( From, To, Minutes ) :-
    flight( From, To, time( Hour, Min ) ),
    Minutes is Hour * 60 + Min.
+
+getMinutes( Hours, Mins, Sum ) :-
+   Sum is Hours * 60 + Mins.
 
 % calculates the duration of flight
 time( From, To, Time ) :-
