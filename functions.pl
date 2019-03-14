@@ -14,9 +14,14 @@ pop2( [_|Tail], Value ) :-
 
 % sees if there is a viable Path
 fly( From, To ) :-
-   write('Searching for a path from '), write(From),
-   write(' to '), write(To), nl,
    isFlight( From, To, [From], [From], 0 ).
+
+% airport is not in database.pl
+isFlight( From, To, _, _, _ ) :-
+   ( not( flight( From, _, _ ) );
+   not( flight( _, To, _ ) ) ),
+   write( 'Error: one or more or the airports not in database' ),
+   nl, !, fail.
 
 % if flight( From -> To ) true
 isFlight( From, To, Tried, _, Current ) :-
@@ -154,5 +159,4 @@ printSched( [Dep|Tail] , Current) :-
    print_trip( arrive, Arr, ArrName, time( ArrHours, ArrMins)),
    printSched( Tail, TimeCurr ).
 
-printSched( [_], _ ) :-
-   nl.
+printSched( [_], _ ).
