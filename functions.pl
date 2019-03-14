@@ -20,7 +20,7 @@ fly( From, To ) :-
 isFlight( From, To, _, _, _ ) :-
    ( not( flight( From, _, _ ) );
    not( flight( _, To, _ ) ) ),
-   write( 'Error: one or more or the airports not in database' ),
+   write( 'Error: one or more of the airports not in database' ),
    nl, !, fail.
 
 % if flight( From -> To ) true
